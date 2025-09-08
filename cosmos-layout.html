@@ -320,6 +320,71 @@
                     y = centerY - (buttonHeight / 2);
                     w = buttonWidth;
                     h = buttonHeight;
+                } else if (hotspot.label.startsWith('cardButtonExchange') && parseInt(hotspot.label.replace('cardButtonExchange', '')) <= 7) {
+                    // Align cardButtonExchange1 to cardButtonExchange7 around center of viewport (10px below cardButtonExchange8-15)
+                    const buttonWidth = 20; // Fixed width in pixels
+                    const buttonHeight = 30; // Fixed height in pixels
+                    const firstRowY = layoutDims.height * 0.435; // First card row position
+                    const firstRowHeight = 30; // First card row button height
+                    const verticalGap = 10; // 10px vertical gap between card rows
+                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
+                    const secondRowHeight = 45; // Second card row button height
+                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
+                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
+                    const fuelHeight = 75; // Fuel buttons height
+                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
+                    const exchangeY = fuelY + (fuelHeight / 2) + exchangeGap + (75 / 2); // Exchange cards position
+                    const exchangeHeight = 75; // Exchange cards height
+                    const exchangeCardGap = 10; // 10px vertical gap between exchange cards and fuelButtonExchange
+                    const fuelExchangeY = exchangeY + (exchangeHeight / 2) + exchangeCardGap + (75 / 2); // FuelButtonExchange position
+                    const fuelExchangeHeight = 75; // FuelButtonExchange height
+                    const fuelExchangeGap = 10; // 10px vertical gap between fuelButtonExchange and cardButtonExchange8-15
+                    const cardExchange8Y = fuelExchangeY + (fuelExchangeHeight / 2) + fuelExchangeGap + (45 / 2); // CardButtonExchange8-15 position
+                    const cardExchange8Height = 45; // CardButtonExchange8-15 height
+                    const cardExchangeGap = 10; // 10px vertical gap between cardButtonExchange8-15 and cardButtonExchange1-7
+                    const centerY = cardExchange8Y + (cardExchange8Height / 2) + cardExchangeGap + (buttonHeight / 2); // Calculate cardButtonExchange1-7 position
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const spacing = 15; // 15px spacing between buttons
+                    const totalWidth = (7 * buttonWidth) + (6 * spacing); // Total width of all buttons
+                    const startX = centerX - (totalWidth / 2); // Start position to center the group
+                    
+                    const cardIndex = parseInt(hotspot.label.replace('cardButtonExchange', '')) - 1; // 0-6
+                    
+                    x = startX + (cardIndex * (buttonWidth + spacing));
+                    y = centerY - (buttonHeight / 2);
+                    w = buttonWidth;
+                    h = buttonHeight;
+                } else if (hotspot.label.startsWith('cardButtonExchange') && parseInt(hotspot.label.replace('cardButtonExchange', '')) >= 8 && parseInt(hotspot.label.replace('cardButtonExchange', '')) <= 15) {
+                    // Align cardButtonExchange8 to cardButtonExchange15 around center of viewport (10px below fuelButtonExchange)
+                    const buttonWidth = 30; // Fixed width in pixels
+                    const buttonHeight = 45; // Fixed height in pixels
+                    const firstRowY = layoutDims.height * 0.435; // First card row position
+                    const firstRowHeight = 30; // First card row button height
+                    const verticalGap = 10; // 10px vertical gap between card rows
+                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
+                    const secondRowHeight = 45; // Second card row button height
+                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
+                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
+                    const fuelHeight = 75; // Fuel buttons height
+                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
+                    const exchangeY = fuelY + (fuelHeight / 2) + exchangeGap + (75 / 2); // Exchange cards position
+                    const exchangeHeight = 75; // Exchange cards height
+                    const exchangeCardGap = 10; // 10px vertical gap between exchange cards and fuelButtonExchange
+                    const fuelExchangeY = exchangeY + (exchangeHeight / 2) + exchangeCardGap + (75 / 2); // FuelButtonExchange position
+                    const fuelExchangeHeight = 75; // FuelButtonExchange height
+                    const fuelExchangeGap = 10; // 10px vertical gap between fuelButtonExchange and cardButtonExchange8-15
+                    const centerY = fuelExchangeY + (fuelExchangeHeight / 2) + fuelExchangeGap + (buttonHeight / 2); // Calculate cardButtonExchange8-15 position
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const spacing = 10; // 10px spacing between buttons
+                    const totalWidth = (8 * buttonWidth) + (7 * spacing); // Total width of all buttons
+                    const startX = centerX - (totalWidth / 2); // Start position to center the group
+                    
+                    const cardIndex = parseInt(hotspot.label.replace('cardButtonExchange', '')) - 8; // 0-7
+                    
+                    x = startX + (cardIndex * (buttonWidth + spacing));
+                    y = centerY - (buttonHeight / 2);
+                    w = buttonWidth;
+                    h = buttonHeight;
                 } else if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
                     // Align fuelButton1 to fuelButton5 around center of viewport
                     const buttonWidth = 50; // Fixed width in pixels
@@ -337,6 +402,34 @@
                     const startX = centerX - (totalWidth / 2); // Start position to center the group
                     
                     const fuelIndex = parseInt(hotspot.label.replace('fuelButton', '')) - 1; // 0-4
+                    
+                    x = startX + (fuelIndex * (buttonWidth + spacing));
+                    y = centerY - (buttonHeight / 2);
+                    w = buttonWidth;
+                    h = buttonHeight;
+                } else if (hotspot.label.startsWith('fuelButtonExchange')) {
+                    // Align fuelButtonExchange1 to fuelButtonExchange5 around center of viewport (10px below exchangeCards)
+                    const buttonWidth = 50; // Fixed width in pixels
+                    const buttonHeight = 75; // Fixed height in pixels
+                    const firstRowY = layoutDims.height * 0.435; // First card row position
+                    const firstRowHeight = 30; // First card row button height
+                    const verticalGap = 10; // 10px vertical gap between card rows
+                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
+                    const secondRowHeight = 45; // Second card row button height
+                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
+                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
+                    const fuelHeight = 75; // Fuel buttons height
+                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
+                    const exchangeY = fuelY + (fuelHeight / 2) + exchangeGap + (75 / 2); // Exchange cards position
+                    const exchangeHeight = 75; // Exchange cards height
+                    const exchangeCardGap = 10; // 10px vertical gap between exchange cards and fuelButtonExchange
+                    const centerY = exchangeY + (exchangeHeight / 2) + exchangeCardGap + (buttonHeight / 2); // Calculate fuelButtonExchange position
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const spacing = 10; // 10px spacing between buttons
+                    const totalWidth = (5 * buttonWidth) + (4 * spacing); // Total width of all buttons
+                    const startX = centerX - (totalWidth / 2); // Start position to center the group
+                    
+                    const fuelIndex = parseInt(hotspot.label.replace('fuelButtonExchange', '')) - 1; // 0-4
                     
                     x = startX + (fuelIndex * (buttonWidth + spacing));
                     y = centerY - (buttonHeight / 2);
