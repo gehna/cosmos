@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cosmos - Interactive Layout</title>
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --text: #e6e8ee;
+            --muted: #98a2b3;
+            --primary: #7c5cff;
+            --primary-600: #6b4bff;
+            --accent: #22d3ee;
+            --radius: 14px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .image-container {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .background-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            z-index: 1;
+            display: block;
+        }
+
+        .button-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .btn {
+            position: absolute;
+            -webkit-tap-highlight-color: transparent;
+            appearance: none;
+            border: 0;
+            background: rgba(124, 92, 255, 0.3);
+            border: 2px solid rgba(124, 92, 255, 0.6);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
+            min-height: 20px;
+            min-width: 20px;
+        }
+
+        .btn:hover { 
+            background: rgba(124, 92, 255, 0.5);
+            border-color: rgba(124, 92, 255, 0.8);
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(124, 92, 255, 0.3);
+        }
+        
+        .btn:active { 
+            transform: scale(0.98);
+            background: rgba(124, 92, 255, 0.7);
+        }
+
+        /* Different button types */
+        .btn.burn, .btn.fly {
+            background: rgba(34, 211, 238, 0.3);
+            border-color: rgba(34, 211, 238, 0.6);
+        }
+        .btn.burn:hover, .btn.fly:hover {
+            background: rgba(34, 211, 238, 0.5);
+            border-color: rgba(34, 211, 238, 0.8);
+        }
+
+        .btn.card {
+            background: rgba(255, 193, 7, 0.3);
+            border-color: rgba(255, 193, 7, 0.6);
+        }
+        .btn.card:hover {
+            background: rgba(255, 193, 7, 0.5);
+            border-color: rgba(255, 193, 7, 0.8);
+        }
+
+        .btn.fuel {
+            background: rgba(40, 167, 69, 0.3);
+            border-color: rgba(40, 167, 69, 0.6);
+        }
+        .btn.fuel:hover {
+            background: rgba(40, 167, 69, 0.5);
+            border-color: rgba(40, 167, 69, 0.8);
+        }
+
+        .btn.exchange {
+            background: rgba(220, 53, 69, 0.3);
+            border-color: rgba(220, 53, 69, 0.6);
+        }
+        .btn.exchange:hover {
+            background: rgba(220, 53, 69, 0.5);
+            border-color: rgba(220, 53, 69, 0.8);
+        }
+
+        .debug-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .button-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="image-container">
+            <img src="./firsts-screen.png" alt="Cosmos Layout" class="background-image" id="background-image">
+            <div class="button-layer" id="button-layer">
+                <!-- Buttons will be dynamically positioned here -->
+            </div>
+        </div>
+    </div>
+
+    <div class="debug-info">
+        <div><strong>Cosmos Interactive Layout</strong></div>
+        <div>Click any button to see its action</div>
+        <div>Total buttons: <span id="button-count">0</span></div>
+    </div>
+
+    <div class="button-info" id="button-info">
+        <div>Click a button to see details</div>
+    </div>
+
+    <script>
+        (function() {
+            const buttonLayer = document.getElementById('button-layer');
+            const buttonCount = document.getElementById('button-count');
+            const buttonInfo = document.getElementById('button-info');
+            const backgroundImage = document.getElementById('background-image');
+            const imageContainer = document.querySelector('.image-container');
+            
+            // Your hotspot data
+            const hotspots = [
+                {"xPct": 0.06171426906622159, "yPct": 0.37438420831207064, "wPct": 0.40990479248821676, "hPct": 0.04152006391552975, "label": "burnButton", "href": ""},
+                {"xPct": 0.5249523905474942, "yPct": 0.3729767542513576, "wPct": 0.4099047517981159, "hPct": 0.046446171919635945, "label": "flyButton", "href": ""},
+                {"xPct": 0.19238887532552082, "yPct": 0.4355501071572891, "wPct": 0.05333333333333334, "hPct": 0.0353037641553456, "label": "cardButton1", "href": ""},
+                {"xPct": 0.2848333740234375, "yPct": 0.437192118226601, "wPct": 0.05333333333333334, "hPct": 0.03366175308603371, "label": "cardButton2", "href": ""},
+                {"xPct": 0.3772777913411458, "yPct": 0.43472906403940886, "wPct": 0.055111083984375, "hPct": 0.03694581280788178, "label": "cardButton3", "href": ""},
+                {"xPct": 0.47327779134114584, "yPct": 0.4355501071572891, "wPct": 0.04977775065104167, "hPct": 0.0353037641553456, "label": "cardButton4", "href": ""},
+                {"xPct": 0.5657222086588541, "yPct": 0.4355501071572891, "wPct": 0.04977783203125, "hPct": 0.034482758620689655, "label": "cardButton5", "href": ""},
+                {"xPct": 0.6599444580078125, "yPct": 0.437192118226601, "wPct": 0.05155558268229166, "hPct": 0.03366175308603371, "label": "cardButton6", "href": ""},
+                {"xPct": 0.7541667073567708, "yPct": 0.43472906403940886, "wPct": 0.04977775065104167, "hPct": 0.03612480727322583, "label": "cardButton7", "href": ""},
+                {"xPct": 0.0839444580078125, "yPct": 0.4856321964357874, "wPct": 0.08, "hPct": 0.05336618658357066, "label": "cardButton8", "href": ""},
+                {"xPct": 0.19416670735677083, "yPct": 0.48481119090113145, "wPct": 0.07466666666666667, "hPct": 0.05336614900034637, "label": "cardButton9", "href": ""},
+                {"xPct": 0.2990555419921875, "yPct": 0.4839901477832512, "wPct": 0.07644449869791667, "hPct": 0.055829240770762775, "label": "cardButton10", "href": ""},
+                {"xPct": 0.40572220865885417, "yPct": 0.48481119090113145, "wPct": 0.07644449869791667, "hPct": 0.05336614900034637, "label": "cardButton11", "href": ""},
+                {"xPct": 0.5123888753255208, "yPct": 0.4839901477832512, "wPct": 0.07822224934895833, "hPct": 0.05500823523610684, "label": "cardButton12", "href": ""},
+                {"xPct": 0.6190555419921875, "yPct": 0.4856321964357874, "wPct": 0.07644449869791667, "hPct": 0.05336618658357066, "label": "cardButton13", "href": ""},
+                {"xPct": 0.7257222086588542, "yPct": 0.4856321964357874, "wPct": 0.07644449869791667, "hPct": 0.052545143465690426, "label": "cardButton14", "href": ""},
+                {"xPct": 0.8323888753255209, "yPct": 0.4856321964357874, "wPct": 0.07466666666666667, "hPct": 0.05336618658357066, "label": "cardButton15", "href": ""},
+                {"xPct": 0.11061112467447917, "yPct": 0.5537767081425108, "wPct": 0.13866666666666666, "hPct": 0.0894909562735722, "label": "fuelButton1", "href": ""},
+                {"xPct": 0.2759444580078125, "yPct": 0.5529556650246306, "wPct": 0.128, "hPct": 0.09031199939145243, "label": "fuelButton2", "href": ""},
+                {"xPct": 0.43238887532552084, "yPct": 0.5545977136771667, "wPct": 0.13511116536458334, "hPct": 0.08702790208638007, "label": "fuelButton3", "href": ""},
+                {"xPct": 0.5923888753255209, "yPct": 0.5529556650246306, "wPct": 0.12977783203125, "hPct": 0.08949099385679649, "label": "fuelButton4", "href": ""},
+                {"xPct": 0.7523888753255208, "yPct": 0.5545977136771667, "wPct": 0.128, "hPct": 0.08784894520426031, "label": "fuelButton5", "href": ""},
+                {"xPct": 0.3488333740234375, "yPct": 0.6572249840045797, "wPct": 0.13155550130208332, "hPct": 0.09277501599542026, "label": "exchangeCard1", "href": ""},
+                {"xPct": 0.5230555419921875, "yPct": 0.6596880381917719, "wPct": 0.12622224934895834, "hPct": 0.08784890762103602, "label": "exchangeCard2", "href": ""},
+                {"xPct": 0.11416666666666667, "yPct": 0.7623152709359606, "wPct": 0.12977779134114584, "hPct": 0.09113300492610837, "label": "fuelButtonExchange1", "href": ""},
+                {"xPct": 0.27416670735677084, "yPct": 0.7606732598666487, "wPct": 0.12977775065104166, "hPct": 0.09277501599542026, "label": "fuelButtonExchange2", "href": ""},
+                {"xPct": 0.4341667073567708, "yPct": 0.7639573195884968, "wPct": 0.12622216796875, "hPct": 0.08702790208638007, "label": "fuelButtonExchange3", "href": ""},
+                {"xPct": 0.5923888753255209, "yPct": 0.7623152709359606, "wPct": 0.12977783203125, "hPct": 0.08949099385679649, "label": "fuelButtonExchange4", "href": ""},
+                {"xPct": 0.7506111246744792, "yPct": 0.7623152709359606, "wPct": 0.13333341471354165, "hPct": 0.09031199939145243, "label": "fuelButtonExchange5", "href": ""},
+                {"xPct": 0.19238887532552082, "yPct": 0.9355501071572891, "wPct": 0.04977783203125, "hPct": 0.034482758620689655, "label": "cardButtonExchange1", "href": ""},
+                {"xPct": 0.2848333740234375, "yPct": 0.9339080960879772, "wPct": 0.05333333333333334, "hPct": 0.036124769690001536, "label": "cardButtonExchange2", "href": ""},
+                {"xPct": 0.3772777913411458, "yPct": 0.9322660098522167, "wPct": 0.05155558268229166, "hPct": 0.03940886699507389, "label": "cardButtonExchange3", "href": ""},
+                {"xPct": 0.46972220865885417, "yPct": 0.9347290640394089, "wPct": 0.056888916015625, "hPct": 0.03530380173856989, "label": "cardButtonExchange4", "href": ""},
+                {"xPct": 0.5621667073567709, "yPct": 0.933087052970097, "wPct": 0.05333333333333334, "hPct": 0.03776685592576201, "label": "cardButtonExchange5", "href": ""},
+                {"xPct": 0.6581667073567709, "yPct": 0.9347290640394089, "wPct": 0.051555501302083334, "hPct": 0.03530380173856989, "label": "cardButtonExchange6", "href": ""},
+                {"xPct": 0.7506111246744792, "yPct": 0.933087052970097, "wPct": 0.055111083984375, "hPct": 0.03694581280788178, "label": "cardButtonExchange7", "href": ""},
+                {"xPct": 0.08572220865885416, "yPct": 0.8657635467980296, "wPct": 0.0764444580078125, "hPct": 0.05665024630541872, "label": "cardButtonExchange8", "href": ""},
+                {"xPct": 0.19238887532552082, "yPct": 0.8657635467980296, "wPct": 0.07644449869791667, "hPct": 0.05500823523610684, "label": "cardButtonExchange9", "href": ""},
+                {"xPct": 0.29727779134114585, "yPct": 0.86740563303379, "wPct": 0.08355558268229167, "hPct": 0.05254510588246613, "label": "cardButtonExchange10", "href": ""},
+                {"xPct": 0.40572220865885417, "yPct": 0.8665845899159098, "wPct": 0.07822224934895833, "hPct": 0.05336614900034637, "label": "cardButtonExchange11", "href": ""},
+                {"xPct": 0.5123888753255208, "yPct": 0.8657635467980296, "wPct": 0.07644449869791667, "hPct": 0.054187192118226604, "label": "cardButtonExchange12", "href": ""},
+                {"xPct": 0.6190555419921875, "yPct": 0.8657635467980296, "wPct": 0.07644449869791667, "hPct": 0.054187192118226604, "label": "cardButtonExchange13", "href": ""},
+                {"xPct": 0.7239444580078125, "yPct": 0.86740563303379, "wPct": 0.08, "hPct": 0.05336614900034637, "label": "cardButtonExchange14", "href": ""},
+                {"xPct": 0.8341667073567708, "yPct": 0.86740563303379, "wPct": 0.07466666666666667, "hPct": 0.05254510588246613, "label": "cardButtonExchange15", "href": ""}
+            ];
+
+            function getButtonType(label) {
+                if (label.includes('burn') || label.includes('fly')) return 'burn';
+                if (label.includes('card')) return 'card';
+                if (label.includes('fuel')) return 'fuel';
+                if (label.includes('exchange')) return 'exchange';
+                return 'default';
+            }
+
+            function getImageDimensions() {
+                const img = backgroundImage;
+                const containerRect = imageContainer.getBoundingClientRect();
+                const imgRect = img.getBoundingClientRect();
+                
+                return {
+                    left: imgRect.left - containerRect.left,
+                    top: imgRect.top - containerRect.top,
+                    width: imgRect.width,
+                    height: imgRect.height
+                };
+            }
+
+            function createButton(hotspot, index) {
+                const btn = document.createElement('button');
+                btn.className = `btn ${getButtonType(hotspot.label)}`;
+                btn.id = hotspot.label;
+                btn.title = hotspot.label;
+                
+                // Get actual image dimensions and position
+                const imgDims = getImageDimensions();
+                
+                // Position button relative to the actual image, not viewport
+                const x = imgDims.left + (hotspot.xPct * imgDims.width);
+                const y = imgDims.top + (hotspot.yPct * imgDims.height);
+                const w = hotspot.wPct * imgDims.width;
+                const h = hotspot.hPct * imgDims.height;
+                
+                btn.style.left = x + 'px';
+                btn.style.top = y + 'px';
+                btn.style.width = w + 'px';
+                btn.style.height = h + 'px';
+                
+                // Add click handler
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleButtonClick(hotspot, index);
+                });
+                
+                return btn;
+            }
+
+            function handleButtonClick(hotspot, index) {
+                console.log(`Clicked: ${hotspot.label} (${index + 1})`);
+                
+                // Update button info display
+                buttonInfo.innerHTML = `
+                    <div><strong>Button ${index + 1}</strong></div>
+                    <div>Label: ${hotspot.label}</div>
+                    <div>Position: ${(hotspot.xPct * 100).toFixed(1)}%, ${(hotspot.yPct * 100).toFixed(1)}%</div>
+                    <div>Size: ${(hotspot.wPct * 100).toFixed(1)}% × ${(hotspot.hPct * 100).toFixed(1)}%</div>
+                `;
+                
+                // Show alert with button details
+                alert(`Button: ${hotspot.label}\nPosition: ${(hotspot.xPct * 100).toFixed(1)}%, ${(hotspot.yPct * 100).toFixed(1)}%\nSize: ${(hotspot.wPct * 100).toFixed(1)}% × ${(hotspot.hPct * 100).toFixed(1)}%`);
+            }
+
+            function renderButtons() {
+                buttonLayer.innerHTML = '';
+                
+                // Wait for image to load before positioning buttons
+                if (backgroundImage.complete) {
+                    positionButtons();
+                } else {
+                    backgroundImage.addEventListener('load', positionButtons, { once: true });
+                }
+            }
+
+            function positionButtons() {
+                hotspots.forEach((hotspot, index) => {
+                    const btn = createButton(hotspot, index);
+                    buttonLayer.appendChild(btn);
+                });
+                
+                buttonCount.textContent = hotspots.length;
+                console.log(`Rendered ${hotspots.length} buttons from layout`);
+            }
+
+            // Initialize
+            renderButtons();
+            
+            // Re-render on window resize to maintain proportions
+            window.addEventListener('resize', () => {
+                setTimeout(renderButtons, 100); // Small delay to ensure image has resized
+            });
+            
+            // Export for external access
+            window.getButton = function(label) {
+                return document.getElementById(label);
+            };
+            
+            window.getAllButtons = function() {
+                return document.querySelectorAll('.btn');
+            };
+            
+            window.getHotspots = function() {
+                return hotspots;
+            };
+            
+            console.log('=== COSMOS INTERACTIVE LAYOUT ===');
+            console.log(`Loaded ${hotspots.length} buttons from hotspots.json`);
+            console.log('Access buttons: window.getButton("burnButton")');
+            console.log('Get all buttons: window.getAllButtons()');
+            console.log('Get hotspot data: window.getHotspots()');
+        })();
+    </script>
+</body>
+</html>
