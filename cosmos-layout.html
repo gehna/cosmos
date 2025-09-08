@@ -262,11 +262,93 @@
                 // Get layout container dimensions
                 const layoutDims = getLayoutDimensions();
                 
-                // Position button relative to layout container
-                const x = hotspot.xPct * layoutDims.width;
-                const y = hotspot.yPct * layoutDims.height;
-                const w = hotspot.wPct * layoutDims.width;
-                const h = hotspot.hPct * layoutDims.height;
+                let x, y, w, h;
+                
+                // Special alignment for burn and fly buttons
+                if (hotspot.label === 'burnButton' || hotspot.label === 'flyButton') {
+                    // Make both buttons exactly 155x40 pixels
+                    const buttonWidth = 155; // Fixed width in pixels
+                    const buttonHeight = 40; // Fixed height in pixels
+                    const centerY = layoutDims.height * 0.375; // Center vertically
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const gap = 20; // 20px gap between buttons
+                    
+                    if (hotspot.label === 'burnButton') {
+                        // Left button - positioned to the left of center
+                        x = centerX - (buttonWidth + gap/2);
+                        y = centerY - (buttonHeight / 2);
+                    } else {
+                        // Right button - positioned to the right of center
+                        x = centerX + (gap/2);
+                        y = centerY - (buttonHeight / 2);
+                    }
+                    
+                    w = buttonWidth;
+                    h = buttonHeight;
+                } else if (hotspot.label.startsWith('cardButton') && parseInt(hotspot.label.replace('cardButton', '')) <= 7) {
+                    // Align cardButton1 to cardButton7 around center of viewport
+                    const buttonWidth = 20; // Fixed width in pixels
+                    const buttonHeight = 30; // Fixed height in pixels
+                    const centerY = layoutDims.height * 0.435; // Center vertically
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const spacing = 15; // 15px spacing between buttons
+                    const totalWidth = (7 * buttonWidth) + (6 * spacing); // Total width of all buttons
+                    const startX = centerX - (totalWidth / 2); // Start position to center the group
+                    
+                    const cardIndex = parseInt(hotspot.label.replace('cardButton', '')) - 1; // 0-6
+                    
+                    x = startX + (cardIndex * (buttonWidth + spacing));
+                    y = centerY - (buttonHeight / 2);
+                    w = buttonWidth;
+                    h = buttonHeight;
+                } else if (hotspot.label.startsWith('cardButton') && parseInt(hotspot.label.replace('cardButton', '')) >= 8 && parseInt(hotspot.label.replace('cardButton', '')) <= 15) {
+                    // Align cardButton8 to cardButton15 around center of viewport
+                    const buttonWidth = 30; // Fixed width in pixels
+                    const buttonHeight = 45; // Fixed height in pixels
+                    const firstRowY = layoutDims.height * 0.435; // First row position
+                    const firstRowHeight = 30; // First row button height
+                    const verticalGap = 10; // 10px vertical gap between rows
+                    const centerY = firstRowY + (firstRowHeight / 2) + verticalGap + (buttonHeight / 2); // Calculate second row position
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const spacing = 10; // 10px spacing between buttons
+                    const totalWidth = (8 * buttonWidth) + (7 * spacing); // Total width of all buttons
+                    const startX = centerX - (totalWidth / 2); // Start position to center the group
+                    
+                    const cardIndex = parseInt(hotspot.label.replace('cardButton', '')) - 8; // 0-7
+                    
+                    x = startX + (cardIndex * (buttonWidth + spacing));
+                    y = centerY - (buttonHeight / 2);
+                    w = buttonWidth;
+                    h = buttonHeight;
+                } else if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
+                    // Align fuelButton1 to fuelButton5 around center of viewport
+                    const buttonWidth = 50; // Fixed width in pixels
+                    const buttonHeight = 75; // Fixed height in pixels
+                    const firstRowY = layoutDims.height * 0.435; // First card row position
+                    const firstRowHeight = 30; // First card row button height
+                    const verticalGap = 10; // 10px vertical gap between card rows
+                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
+                    const secondRowHeight = 45; // Second card row button height
+                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
+                    const centerY = secondRowY + (secondRowHeight / 2) + fuelGap + (buttonHeight / 2); // Calculate fuel buttons position
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const spacing = 10; // 10px spacing between buttons
+                    const totalWidth = (5 * buttonWidth) + (4 * spacing); // Total width of all buttons
+                    const startX = centerX - (totalWidth / 2); // Start position to center the group
+                    
+                    const fuelIndex = parseInt(hotspot.label.replace('fuelButton', '')) - 1; // 0-4
+                    
+                    x = startX + (fuelIndex * (buttonWidth + spacing));
+                    y = centerY - (buttonHeight / 2);
+                    w = buttonWidth;
+                    h = buttonHeight;
+                } else {
+                    // Use original positioning for other buttons
+                    x = hotspot.xPct * layoutDims.width;
+                    y = hotspot.yPct * layoutDims.height;
+                    w = hotspot.wPct * layoutDims.width;
+                    h = hotspot.hPct * layoutDims.height;
+                }
                 
                 btn.style.left = x + 'px';
                 btn.style.top = y + 'px';
