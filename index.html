@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cosmos</title>
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --panel: #121826;
+            --text: #e6e8ee;
+            --muted: #98a2b3;
+            --primary: #7c5cff;
+            --primary-600: #6b4bff;
+            --accent: #22d3ee;
+            --radius: 14px;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 800px at 80% -10%, rgba(124,92,255,0.25), transparent 60%),
+                        radial-gradient(900px 700px at -20% 120%, rgba(34,211,238,0.18), transparent 60%),
+                        var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+            box-sizing: border-box;
+        }
+
+        .shell {
+            width: min(1100px, 100%);
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 28px;
+            align-items: stretch;
+        }
+        body.no-panel .shell { grid-template-columns: 1fr; }
+        body.no-panel aside.panel { display: none; }
+
+        .mock {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 520px;
+            position: relative;
+        }
+
+        .mock img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            backdrop-filter: blur(6px);
+        }
+
+        /* Hotspot overlay */
+        .hotspot-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .hotspot {
+            position: absolute;
+            border-radius: 10px;
+            outline: 2px solid rgba(124,92,255,0.85);
+            background: rgba(124,92,255,0.18);
+            box-shadow: 0 0 0 4px rgba(124,92,255,0.12) inset, 0 8px 22px rgba(0,0,0,0.35);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: transform 0.08s ease, outline-color 0.2s ease, background 0.2s ease;
+        }
+
+        .hotspot:hover { transform: translateY(1px); background: rgba(124,92,255,0.24); }
+
+        .hotspot .label {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+            right: 10px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+            pointer-events: none;
+        }
+
+        .hotspot-edit-tip {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.45);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            letter-spacing: 0.2px;
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.12);
+            user-select: none;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: 0.4px;
+        }
+
+        .brand small {
+            color: var(--muted);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .btn {
+            -webkit-tap-highlight-color: transparent;
+            appearance: none;
+            border: 0;
+            background: #1a2235;
+            color: var(--text);
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: transform 0.08s ease, background 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+        }
+
+        .btn:hover { background: #1d2740; }
+        .btn:active { transform: translateY(1px); }
+
+        .btn.primary {
+            background: linear-gradient(180deg, var(--primary), var(--primary-600));
+            box-shadow: 0 10px 26px rgba(124,92,255,0.35);
+        }
+
+        .btn.accent {
+            background: linear-gradient(180deg, #2ee7ff, #1ecce5);
+            color: #001018;
+            box-shadow: 0 10px 26px rgba(34,211,238,0.35);
+        }
+
+        .hint {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: 8px;
+            max-height: 280px;
+            overflow: auto;
+            padding-right: 2px;
+        }
+        .list .item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #141b2b;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .list .item-title { font-weight: 600; font-size: 14px; }
+        .list .item-actions { display: flex; gap: 8px; }
+        .mini-btn {
+            appearance: none;
+            border: 0;
+            background: #1a2235;
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        @media (max-width: 960px) {
+            .shell { grid-template-columns: 1fr; }
+            .mock { min-height: 320px; }
+        }
+
+        .floating-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 50;
+            display: flex;
+            gap: 8px;
+        }
+        .floating-toggle .mini-btn { box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    </style>
+    <meta name="color-scheme" content="dark light">
+</head>
+<body>
+    <div class="floating-toggle">
+        <button class="mini-btn" id="toggle-panel">Hide Panel</button>
+    </div>
+    <main class="shell">
+        <section class="mock" aria-label="Draft preview">
+            <img alt="first screen draft" src="./firsts-screen.png" />
+            <div class="hotspot-layer" id="hotspot-layer"></div>
+            <div class="hotspot-edit-tip">Hold Shift and drag to create a button area</div>
+        </section>
+        <aside class="panel">
+            <div class="brand">
+                <h1>Cosmos</h1>
+                <small>v0</small>
+            </div>
+
+            <div class="brand" style="margin-top: 2px;">
+                <h1 style="font-size:16px;">Buttons</h1>
+                <small class="hint">Auto-synced from hotspots</small>
+            </div>
+            <div class="buttons" id="hotspot-buttons"></div>
+
+            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 6px 0 4px;" />
+            <div class="brand" style="margin-top: 2px;">
+                <h1 style="font-size:16px;">Hotspots</h1>
+                <div class="item-actions">
+                    <button class="mini-btn" id="export-hotspots">Export JSON</button>
+                    <button class="mini-btn" id="clear-hotspots" style="background:#2a334b;">Clear</button>
+                </div>
+            </div>
+            <div class="list" id="hotspot-list"></div>
+        </aside>
+    </main>
+
+    <script>
+        (function() {
+            const img = document.querySelector('.mock img');
+            const layer = document.getElementById('hotspot-layer');
+            const storageKey = 'cosmos-hotspots';
+
+            let hotspots = [];
+            let isDragging = false;
+            let dragStart = null;
+            let tempRect = null;
+
+            function loadHotspots() {
+                try {
+                    const raw = localStorage.getItem(storageKey);
+                    hotspots = raw ? JSON.parse(raw) : [];
+                } catch {
+                    hotspots = [];
+                }
+            }
+
+            function saveHotspots() {
+                localStorage.setItem(storageKey, JSON.stringify(hotspots));
+            }
+
+            function getImageBox() {
+                const r = img.getBoundingClientRect();
+                return { x: r.left + window.scrollX, y: r.top + window.scrollY, width: r.width, height: r.height };
+            }
+
+            function clearLayer() {
+                while (layer.firstChild) layer.removeChild(layer.firstChild);
+            }
+
+            function openTarget(url) {
+                if (!url) return;
+                if (url.startsWith('#')) {
+                    location.hash = url.slice(1);
+                } else if (/^https?:\/\//i.test(url)) {
+                    window.open(url, '_blank');
+                } else {
+                    try { new URL(url); window.open(url, '_blank'); } catch { /* ignore */ }
+                }
+            }
+
+            function renderHotspots() {
+                clearLayer();
+                const box = getImageBox();
+                const layerBox = layer.getBoundingClientRect();
+                const offsetX = box.x - (layerBox.left + window.scrollX);
+                const offsetY = box.y - (layerBox.top + window.scrollY);
+                const list = document.getElementById('hotspot-list');
+                if (list) list.innerHTML = '';
+                const buttonPanel = document.getElementById('hotspot-buttons');
+                if (buttonPanel) buttonPanel.innerHTML = '';
+                hotspots.forEach((h, idx) => {
+                    const el = document.createElement('div');
+                    el.className = 'hotspot';
+                    el.style.left = offsetX + (h.xPct * box.width) + 'px';
+                    el.style.top = offsetY + (h.yPct * box.height) + 'px';
+                    el.style.width = (h.wPct * box.width) + 'px';
+                    el.style.height = (h.hPct * box.height) + 'px';
+                    el.title = h.label || 'Hotspot';
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openTarget(h.href || '');
+                    });
+                    const label = document.createElement('div');
+                    label.className = 'label';
+                    label.textContent = h.label || '';
+                    el.appendChild(label);
+                    el.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        const action = prompt('Edit(e) / Delete(d) / Cancel', 'e');
+                        if (!action) return;
+                        if (action.toLowerCase() === 'd') {
+                            hotspots.splice(idx, 1);
+                            saveHotspots();
+                            renderHotspots();
+                        } else if (action.toLowerCase() === 'e') {
+                            const label = prompt('Label', h.label || '') || '';
+                            const href = prompt('Link (optional)', h.href || '') || '';
+                            hotspots[idx] = { ...h, label, href };
+                            saveHotspots();
+                            renderHotspots();
+                        }
+                    });
+                    layer.appendChild(el);
+
+                    if (list) {
+                        const item = document.createElement('div');
+                        item.className = 'item';
+                        const title = document.createElement('div');
+                        title.className = 'item-title';
+                        title.textContent = h.label || `Hotspot ${idx+1}`;
+                        const actions = document.createElement('div');
+                        actions.className = 'item-actions';
+                        const openBtn = document.createElement('button');
+                        openBtn.className = 'mini-btn';
+                        openBtn.textContent = 'Open';
+                        openBtn.addEventListener('click', () => openTarget(h.href || ''));
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'mini-btn';
+                        editBtn.textContent = 'Edit';
+                        editBtn.addEventListener('click', () => {
+                            const label = prompt('Label', h.label || '') || '';
+                            const href = prompt('Link (optional)', h.href || '') || '';
+                            hotspots[idx] = { ...h, label, href };
+                            saveHotspots();
+                            renderHotspots();
+                        });
+                        const delBtn = document.createElement('button');
+                        delBtn.className = 'mini-btn';
+                        delBtn.textContent = 'Delete';
+                        delBtn.addEventListener('click', () => {
+                            if (!confirm('Delete this hotspot?')) return;
+                            hotspots.splice(idx, 1);
+                            saveHotspots();
+                            renderHotspots();
+                        });
+                        actions.appendChild(openBtn);
+                        actions.appendChild(editBtn);
+                        actions.appendChild(delBtn);
+                        item.appendChild(title);
+                        item.appendChild(actions);
+                        list.appendChild(item);
+                    }
+
+                    if (buttonPanel) {
+                        const b = document.createElement('button');
+                        b.className = 'btn';
+                        b.textContent = h.label || `Hotspot ${idx+1}`;
+                        b.addEventListener('click', () => openTarget(h.href || ''));
+                        buttonPanel.appendChild(b);
+                    }
+                });
+            }
+
+            function normalizeRect(x1, y1, x2, y2) {
+                const left = Math.min(x1, x2), top = Math.min(y1, y2);
+                const right = Math.max(x1, x2), bottom = Math.max(y1, y2);
+                return { left, top, width: right - left, height: bottom - top };
+            }
+
+            function createTempRect() {
+                const r = document.createElement('div');
+                r.className = 'hotspot';
+                r.style.pointerEvents = 'none';
+                r.style.outlineStyle = 'dashed';
+                r.style.background = 'rgba(124,92,255,0.12)';
+                layer.appendChild(r);
+                return r;
+            }
+
+            function onPointerDown(e) {
+                if (!e.shiftKey) return;
+                const box = getImageBox();
+                const withinImage = e.clientX >= box.x - window.scrollX && e.clientX <= box.x - window.scrollX + box.width && e.clientY >= box.y - window.scrollY && e.clientY <= box.y - window.scrollY + box.height;
+                if (!withinImage) return;
+                isDragging = true;
+                dragStart = { x: e.pageX, y: e.pageY };
+                tempRect = createTempRect();
+                e.preventDefault();
+            }
+
+            function onPointerMove(e) {
+                if (!isDragging || !tempRect) return;
+                const n = normalizeRect(dragStart.x, dragStart.y, e.pageX, e.pageY);
+                const box = getImageBox();
+                const layerBox = layer.getBoundingClientRect();
+                const offsetX = box.x - (layerBox.left + window.scrollX);
+                const offsetY = box.y - (layerBox.top + window.scrollY);
+
+                const left = Math.max(n.left, box.x);
+                const top = Math.max(n.top, box.y);
+                const right = Math.min(n.left + n.width, box.x + box.width);
+                const bottom = Math.min(n.top + n.height, box.y + box.height);
+
+                const clipped = { left, top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+
+                tempRect.style.left = (offsetX + (clipped.left - box.x)) + 'px';
+                tempRect.style.top = (offsetY + (clipped.top - box.y)) + 'px';
+                tempRect.style.width = clipped.width + 'px';
+                tempRect.style.height = clipped.height + 'px';
+            }
+
+            function onPointerUp(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                const box = getImageBox();
+                const n = normalizeRect(dragStart.x, dragStart.y, e.pageX, e.pageY);
+                const left = Math.max(n.left, box.x);
+                const top = Math.max(n.top, box.y);
+                const right = Math.min(n.left + n.width, box.x + box.width);
+                const bottom = Math.min(n.top + n.height, box.y + box.height);
+                const w = Math.max(0, right - left);
+                const h = Math.max(0, bottom - top);
+                if (tempRect && tempRect.parentNode) tempRect.parentNode.removeChild(tempRect);
+                tempRect = null;
+                if (w < 8 || h < 8) return;
+
+                const xPct = (left - box.x) / box.width;
+                const yPct = (top - box.y) / box.height;
+                const wPct = w / box.width;
+                const hPct = h / box.height;
+
+                const label = prompt('Button label');
+                if (label === null) { renderHotspots(); return; }
+                const href = prompt('Link (optional, URL or #hash)') || '';
+
+                hotspots.push({ xPct, yPct, wPct, hPct, label: label || '', href });
+                saveHotspots();
+                renderHotspots();
+            }
+
+            function onResize() { renderHotspots(); }
+
+            function init() {
+                loadHotspots();
+                if (img.complete) {
+                    renderHotspots();
+                } else {
+                    img.addEventListener('load', renderHotspots, { once: true });
+                }
+                window.addEventListener('resize', onResize);
+                document.addEventListener('scroll', onResize, { passive: true });
+                document.addEventListener('pointerdown', onPointerDown);
+                document.addEventListener('pointermove', onPointerMove);
+                document.addEventListener('pointerup', onPointerUp);
+
+                const exportBtn = document.getElementById('export-hotspots');
+                const clearBtn = document.getElementById('clear-hotspots');
+                if (exportBtn) exportBtn.addEventListener('click', () => {
+                    const blob = new Blob([JSON.stringify(hotspots, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'hotspots.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                });
+                if (clearBtn) clearBtn.addEventListener('click', () => {
+                    if (!confirm('Clear all hotspots?')) return;
+                    hotspots = [];
+                    saveHotspots();
+                    renderHotspots();
+                });
+
+                const panelPrefKey = 'cosmos-panel-hidden';
+                const toggleBtn = document.getElementById('toggle-panel');
+                function setPanelHidden(hidden) {
+                    document.body.classList.toggle('no-panel', !!hidden);
+                    if (toggleBtn) toggleBtn.textContent = hidden ? 'Show Panel' : 'Hide Panel';
+                    try { localStorage.setItem(panelPrefKey, hidden ? '1' : '0'); } catch {}
+                }
+                try {
+                    const saved = localStorage.getItem(panelPrefKey);
+                    if (saved === '1') setPanelHidden(true);
+                } catch {}
+                if (toggleBtn) toggleBtn.addEventListener('click', () => {
+                    const hidden = !document.body.classList.contains('no-panel');
+                    setPanelHidden(hidden);
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key.toLowerCase() === 'p') {
+                        const hidden = !document.body.classList.contains('no-panel');
+                        setPanelHidden(hidden);
+                    }
+                });
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
+
+
