@@ -42,21 +42,16 @@
             overflow: hidden;
         }
 
-        .image-container {
+        .layout-container {
             position: relative;
-            max-width: 100%;
-            max-height: 100%;
+            width: 375px;
+            height: 812px;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .background-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            z-index: 1;
-            display: block;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         .button-layer {
@@ -65,7 +60,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
             pointer-events: none;
         }
 
@@ -74,8 +68,8 @@
             -webkit-tap-highlight-color: transparent;
             appearance: none;
             border: 0;
-            background: rgba(124, 92, 255, 0.3);
-            border: 2px solid rgba(124, 92, 255, 0.6);
+            background: rgba(124, 92, 255, 0.8);
+            border: 2px solid rgba(124, 92, 255, 1);
             border-radius: 8px;
             color: var(--text);
             font-size: 12px;
@@ -87,7 +81,6 @@
             cursor: pointer;
             transition: all 0.2s ease;
             pointer-events: auto;
-            backdrop-filter: blur(4px);
             min-height: 20px;
             min-width: 20px;
         }
@@ -170,8 +163,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="image-container">
-            <img src="./firsts-screen.png" alt="Cosmos Layout" class="background-image" id="background-image">
+        <div class="layout-container">
             <div class="button-layer" id="button-layer">
                 <!-- Buttons will be dynamically positioned here -->
             </div>
@@ -193,8 +185,7 @@
             const buttonLayer = document.getElementById('button-layer');
             const buttonCount = document.getElementById('button-count');
             const buttonInfo = document.getElementById('button-info');
-            const backgroundImage = document.getElementById('background-image');
-            const imageContainer = document.querySelector('.image-container');
+            const layoutContainer = document.querySelector('.layout-container');
             
             // Your hotspot data
             const hotspots = [
@@ -252,16 +243,13 @@
                 return 'default';
             }
 
-            function getImageDimensions() {
-                const img = backgroundImage;
-                const containerRect = imageContainer.getBoundingClientRect();
-                const imgRect = img.getBoundingClientRect();
-                
+            function getLayoutDimensions() {
+                const rect = layoutContainer.getBoundingClientRect();
                 return {
-                    left: imgRect.left - containerRect.left,
-                    top: imgRect.top - containerRect.top,
-                    width: imgRect.width,
-                    height: imgRect.height
+                    left: 0,
+                    top: 0,
+                    width: rect.width,
+                    height: rect.height
                 };
             }
 
@@ -271,14 +259,14 @@
                 btn.id = hotspot.label;
                 btn.title = hotspot.label;
                 
-                // Get actual image dimensions and position
-                const imgDims = getImageDimensions();
+                // Get layout container dimensions
+                const layoutDims = getLayoutDimensions();
                 
-                // Position button relative to the actual image, not viewport
-                const x = imgDims.left + (hotspot.xPct * imgDims.width);
-                const y = imgDims.top + (hotspot.yPct * imgDims.height);
-                const w = hotspot.wPct * imgDims.width;
-                const h = hotspot.hPct * imgDims.height;
+                // Position button relative to layout container
+                const x = hotspot.xPct * layoutDims.width;
+                const y = hotspot.yPct * layoutDims.height;
+                const w = hotspot.wPct * layoutDims.width;
+                const h = hotspot.hPct * layoutDims.height;
                 
                 btn.style.left = x + 'px';
                 btn.style.top = y + 'px';
@@ -312,15 +300,6 @@
             function renderButtons() {
                 buttonLayer.innerHTML = '';
                 
-                // Wait for image to load before positioning buttons
-                if (backgroundImage.complete) {
-                    positionButtons();
-                } else {
-                    backgroundImage.addEventListener('load', positionButtons, { once: true });
-                }
-            }
-
-            function positionButtons() {
                 hotspots.forEach((hotspot, index) => {
                     const btn = createButton(hotspot, index);
                     buttonLayer.appendChild(btn);
@@ -334,9 +313,7 @@
             renderButtons();
             
             // Re-render on window resize to maintain proportions
-            window.addEventListener('resize', () => {
-                setTimeout(renderButtons, 100); // Small delay to ensure image has resized
-            });
+            window.addEventListener('resize', renderButtons);
             
             // Export for external access
             window.getButton = function(label) {
