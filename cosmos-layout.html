@@ -342,6 +342,31 @@
                     y = centerY - (buttonHeight / 2);
                     w = buttonWidth;
                     h = buttonHeight;
+                } else if (hotspot.label.startsWith('exchangeCard')) {
+                    // Align exchangeCard1 to exchangeCard2 around center of viewport
+                    const buttonWidth = 50; // Fixed width in pixels
+                    const buttonHeight = 75; // Fixed height in pixels
+                    const firstRowY = layoutDims.height * 0.435; // First card row position
+                    const firstRowHeight = 30; // First card row button height
+                    const verticalGap = 10; // 10px vertical gap between card rows
+                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
+                    const secondRowHeight = 45; // Second card row button height
+                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
+                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
+                    const fuelHeight = 75; // Fuel buttons height
+                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
+                    const centerY = fuelY + (fuelHeight / 2) + exchangeGap + (buttonHeight / 2); // Calculate exchange cards position
+                    const centerX = layoutDims.width / 2; // Center of viewport
+                    const spacing = 15; // 15px spacing between buttons
+                    const totalWidth = (2 * buttonWidth) + (1 * spacing); // Total width of both buttons
+                    const startX = centerX - (totalWidth / 2); // Start position to center the group
+                    
+                    const exchangeIndex = parseInt(hotspot.label.replace('exchangeCard', '')) - 1; // 0-1
+                    
+                    x = startX + (exchangeIndex * (buttonWidth + spacing));
+                    y = centerY - (buttonHeight / 2);
+                    w = buttonWidth;
+                    h = buttonHeight;
                 } else {
                     // Use original positioning for other buttons
                     x = hotspot.xPct * layoutDims.width;
