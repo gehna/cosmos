@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cosmos - Interactive Layout</title>
+    <title>Cosmos - Player 2</title>
     <style>
         :root {
             --bg: #0b0f1a;
@@ -12,6 +12,7 @@
             --primary: #7c5cff;
             --primary-600: #6b4bff;
             --accent: #22d3ee;
+            --player-color: #ff6b6b;
             --radius: 14px;
         }
 
@@ -49,9 +50,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--player-color);
             border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(255, 107, 107, 0.3);
         }
 
         .button-layer {
@@ -125,6 +126,14 @@
             border-color: rgba(40, 167, 69, 0.8);
         }
 
+        .btn.fuel.selected {
+            background: rgba(40, 167, 69, 0.9);
+            border-color: #ffd700;
+            border-width: 3px;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            transform: scale(1.1);
+        }
+
         .btn.exchange {
             background: rgba(220, 53, 69, 0.3);
             border-color: rgba(220, 53, 69, 0.6);
@@ -134,17 +143,18 @@
             border-color: rgba(220, 53, 69, 0.8);
         }
 
-        .debug-info {
+        .player-info {
             position: fixed;
             top: 10px;
             left: 10px;
             background: rgba(0,0,0,0.8);
-            color: white;
+            color: var(--player-color);
             padding: 10px;
             border-radius: 8px;
             font-size: 12px;
             z-index: 1000;
             max-width: 300px;
+            border: 1px solid var(--player-color);
         }
 
         .button-info {
@@ -159,34 +169,123 @@
             z-index: 1000;
             max-width: 300px;
         }
+
+        .cards-display {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            z-index: 1000;
+            max-width: 200px;
+            border: 1px solid var(--player-color);
+        }
+
+        .regenerate-btn {
+            position: fixed;
+            top: 50%;
+            left: 10px;
+            background: var(--player-color);
+            color: var(--bg);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.2s ease;
+        }
+
+        .regenerate-btn:hover {
+            background: rgba(255, 107, 107, 0.8);
+            transform: scale(1.05);
+        }
+
+        .game-message {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--player-color);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="layout-container">
+            <div class="game-message" id="game-message">
+                Player 2 - Ready to Play!
+            </div>
             <div class="button-layer" id="button-layer">
                 <!-- Buttons will be dynamically positioned here -->
             </div>
         </div>
     </div>
 
-    <div class="debug-info">
-        <div><strong>Cosmos Interactive Layout</strong></div>
-        <div>Click any button to see its action</div>
-        <div>Total buttons: <span id="button-count">0</span></div>
+    <div class="player-info">
+        <div><strong>🚀 PLAYER 2</strong></div>
+        <div>Cards: <span id="card-count">15</span></div>
+        <div>Fuel: <span id="fuel-count">5</span></div>
+        <div>Status: Ready</div>
+    </div>
+
+    <div class="cards-display">
+        <div><strong>Cards:</strong></div>
+        <div id="cards-list">Loading...</div>
     </div>
 
     <div class="button-info" id="button-info">
         <div>Click a button to see details</div>
     </div>
 
+    <button class="regenerate-btn" id="regenerate-btn">🔄 REGENERATE</button>
+
     <script>
         (function() {
             const buttonLayer = document.getElementById('button-layer');
-            const buttonCount = document.getElementById('button-count');
             const buttonInfo = document.getElementById('button-info');
             const layoutContainer = document.querySelector('.layout-container');
+            const cardCount = document.getElementById('card-count');
+            const fuelCount = document.getElementById('fuel-count');
+            const cardsList = document.getElementById('cards-list');
+            const regenerateBtn = document.getElementById('regenerate-btn');
+            const gameMessage = document.getElementById('game-message');
             
+            // Track selected fuel cards
+            let selectedFuelCards = new Set();
+            
+            // Player data
+            let playerData = {
+                name: "Player 2",
+                cards: [14, 39, 6, 27, 45, 11, 34, 8, 47, 22, 16, 43, 3, 37, 26],
+                fuel: [14, 39, 6, 27, 45]
+            };
+
+            // Other player data (Player 1)
+            let otherPlayerData = {
+                name: "Player 1",
+                cards: [23, 7, 41, 15, 33, 2, 48, 19, 36, 5, 29, 44, 12, 38, 21],
+                fuel: [23, 7, 41, 15, 33]
+            };
+
             // Your hotspot data
             const hotspots = [
                 {"xPct": 0.06171426906622159, "yPct": 0.37438420831207064, "wPct": 0.40990479248821676, "hPct": 0.04152006391552975, "label": "burnButton", "href": ""},
@@ -320,71 +419,6 @@
                     y = centerY - (buttonHeight / 2);
                     w = buttonWidth;
                     h = buttonHeight;
-                } else if (hotspot.label.startsWith('cardButtonExchange') && parseInt(hotspot.label.replace('cardButtonExchange', '')) <= 7) {
-                    // Align cardButtonExchange1 to cardButtonExchange7 around center of viewport (10px below cardButtonExchange8-15)
-                    const buttonWidth = 20; // Fixed width in pixels
-                    const buttonHeight = 30; // Fixed height in pixels
-                    const firstRowY = layoutDims.height * 0.435; // First card row position
-                    const firstRowHeight = 30; // First card row button height
-                    const verticalGap = 10; // 10px vertical gap between card rows
-                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
-                    const secondRowHeight = 45; // Second card row button height
-                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
-                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
-                    const fuelHeight = 75; // Fuel buttons height
-                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
-                    const exchangeY = fuelY + (fuelHeight / 2) + exchangeGap + (75 / 2); // Exchange cards position
-                    const exchangeHeight = 75; // Exchange cards height
-                    const exchangeCardGap = 10; // 10px vertical gap between exchange cards and fuelButtonExchange
-                    const fuelExchangeY = exchangeY + (exchangeHeight / 2) + exchangeCardGap + (75 / 2); // FuelButtonExchange position
-                    const fuelExchangeHeight = 75; // FuelButtonExchange height
-                    const fuelExchangeGap = 10; // 10px vertical gap between fuelButtonExchange and cardButtonExchange8-15
-                    const cardExchange8Y = fuelExchangeY + (fuelExchangeHeight / 2) + fuelExchangeGap + (45 / 2); // CardButtonExchange8-15 position
-                    const cardExchange8Height = 45; // CardButtonExchange8-15 height
-                    const cardExchangeGap = 10; // 10px vertical gap between cardButtonExchange8-15 and cardButtonExchange1-7
-                    const centerY = cardExchange8Y + (cardExchange8Height / 2) + cardExchangeGap + (buttonHeight / 2); // Calculate cardButtonExchange1-7 position
-                    const centerX = layoutDims.width / 2; // Center of viewport
-                    const spacing = 15; // 15px spacing between buttons
-                    const totalWidth = (7 * buttonWidth) + (6 * spacing); // Total width of all buttons
-                    const startX = centerX - (totalWidth / 2); // Start position to center the group
-                    
-                    const cardIndex = parseInt(hotspot.label.replace('cardButtonExchange', '')) - 1; // 0-6
-                    
-                    x = startX + (cardIndex * (buttonWidth + spacing));
-                    y = centerY - (buttonHeight / 2);
-                    w = buttonWidth;
-                    h = buttonHeight;
-                } else if (hotspot.label.startsWith('cardButtonExchange') && parseInt(hotspot.label.replace('cardButtonExchange', '')) >= 8 && parseInt(hotspot.label.replace('cardButtonExchange', '')) <= 15) {
-                    // Align cardButtonExchange8 to cardButtonExchange15 around center of viewport (10px below fuelButtonExchange)
-                    const buttonWidth = 30; // Fixed width in pixels
-                    const buttonHeight = 45; // Fixed height in pixels
-                    const firstRowY = layoutDims.height * 0.435; // First card row position
-                    const firstRowHeight = 30; // First card row button height
-                    const verticalGap = 10; // 10px vertical gap between card rows
-                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
-                    const secondRowHeight = 45; // Second card row button height
-                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
-                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
-                    const fuelHeight = 75; // Fuel buttons height
-                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
-                    const exchangeY = fuelY + (fuelHeight / 2) + exchangeGap + (75 / 2); // Exchange cards position
-                    const exchangeHeight = 75; // Exchange cards height
-                    const exchangeCardGap = 10; // 10px vertical gap between exchange cards and fuelButtonExchange
-                    const fuelExchangeY = exchangeY + (exchangeHeight / 2) + exchangeCardGap + (75 / 2); // FuelButtonExchange position
-                    const fuelExchangeHeight = 75; // FuelButtonExchange height
-                    const fuelExchangeGap = 10; // 10px vertical gap between fuelButtonExchange and cardButtonExchange8-15
-                    const centerY = fuelExchangeY + (fuelExchangeHeight / 2) + fuelExchangeGap + (buttonHeight / 2); // Calculate cardButtonExchange8-15 position
-                    const centerX = layoutDims.width / 2; // Center of viewport
-                    const spacing = 10; // 10px spacing between buttons
-                    const totalWidth = (8 * buttonWidth) + (7 * spacing); // Total width of all buttons
-                    const startX = centerX - (totalWidth / 2); // Start position to center the group
-                    
-                    const cardIndex = parseInt(hotspot.label.replace('cardButtonExchange', '')) - 8; // 0-7
-                    
-                    x = startX + (cardIndex * (buttonWidth + spacing));
-                    y = centerY - (buttonHeight / 2);
-                    w = buttonWidth;
-                    h = buttonHeight;
                 } else if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
                     // Align fuelButton1 to fuelButton5 around center of viewport
                     const buttonWidth = 50; // Fixed width in pixels
@@ -407,59 +441,6 @@
                     y = centerY - (buttonHeight / 2);
                     w = buttonWidth;
                     h = buttonHeight;
-                } else if (hotspot.label.startsWith('fuelButtonExchange')) {
-                    // Align fuelButtonExchange1 to fuelButtonExchange5 around center of viewport (10px below exchangeCards)
-                    const buttonWidth = 50; // Fixed width in pixels
-                    const buttonHeight = 75; // Fixed height in pixels
-                    const firstRowY = layoutDims.height * 0.435; // First card row position
-                    const firstRowHeight = 30; // First card row button height
-                    const verticalGap = 10; // 10px vertical gap between card rows
-                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
-                    const secondRowHeight = 45; // Second card row button height
-                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
-                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
-                    const fuelHeight = 75; // Fuel buttons height
-                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
-                    const exchangeY = fuelY + (fuelHeight / 2) + exchangeGap + (75 / 2); // Exchange cards position
-                    const exchangeHeight = 75; // Exchange cards height
-                    const exchangeCardGap = 10; // 10px vertical gap between exchange cards and fuelButtonExchange
-                    const centerY = exchangeY + (exchangeHeight / 2) + exchangeCardGap + (buttonHeight / 2); // Calculate fuelButtonExchange position
-                    const centerX = layoutDims.width / 2; // Center of viewport
-                    const spacing = 10; // 10px spacing between buttons
-                    const totalWidth = (5 * buttonWidth) + (4 * spacing); // Total width of all buttons
-                    const startX = centerX - (totalWidth / 2); // Start position to center the group
-                    
-                    const fuelIndex = parseInt(hotspot.label.replace('fuelButtonExchange', '')) - 1; // 0-4
-                    
-                    x = startX + (fuelIndex * (buttonWidth + spacing));
-                    y = centerY - (buttonHeight / 2);
-                    w = buttonWidth;
-                    h = buttonHeight;
-                } else if (hotspot.label.startsWith('exchangeCard')) {
-                    // Align exchangeCard1 to exchangeCard2 around center of viewport
-                    const buttonWidth = 50; // Fixed width in pixels
-                    const buttonHeight = 75; // Fixed height in pixels
-                    const firstRowY = layoutDims.height * 0.435; // First card row position
-                    const firstRowHeight = 30; // First card row button height
-                    const verticalGap = 10; // 10px vertical gap between card rows
-                    const secondRowY = firstRowY + (firstRowHeight / 2) + verticalGap + (45 / 2); // Second card row position
-                    const secondRowHeight = 45; // Second card row button height
-                    const fuelGap = 10; // 10px vertical gap between second card row and fuel buttons
-                    const fuelY = secondRowY + (secondRowHeight / 2) + fuelGap + (75 / 2); // Fuel buttons position
-                    const fuelHeight = 75; // Fuel buttons height
-                    const exchangeGap = 10; // 10px vertical gap between fuel buttons and exchange cards
-                    const centerY = fuelY + (fuelHeight / 2) + exchangeGap + (buttonHeight / 2); // Calculate exchange cards position
-                    const centerX = layoutDims.width / 2; // Center of viewport
-                    const spacing = 15; // 15px spacing between buttons
-                    const totalWidth = (2 * buttonWidth) + (1 * spacing); // Total width of both buttons
-                    const startX = centerX - (totalWidth / 2); // Start position to center the group
-                    
-                    const exchangeIndex = parseInt(hotspot.label.replace('exchangeCard', '')) - 1; // 0-1
-                    
-                    x = startX + (exchangeIndex * (buttonWidth + spacing));
-                    y = centerY - (buttonHeight / 2);
-                    w = buttonWidth;
-                    h = buttonHeight;
                 } else {
                     // Use original positioning for other buttons
                     x = hotspot.xPct * layoutDims.width;
@@ -478,30 +459,217 @@
                     btn.textContent = 'BURN';
                 } else if (hotspot.label === 'flyButton') {
                     btn.textContent = 'FLY';
+                } else if (hotspot.label.startsWith('cardButton') && parseInt(hotspot.label.replace('cardButton', '')) <= 15) {
+                    const cardIndex = parseInt(hotspot.label.replace('cardButton', '')) - 1;
+                    if (cardIndex < playerData.cards.length) {
+                        btn.textContent = playerData.cards[cardIndex];
+                    }
+                } else if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
+                    const fuelIndex = parseInt(hotspot.label.replace('fuelButton', '')) - 1;
+                    if (fuelIndex < playerData.fuel.length) {
+                        btn.textContent = playerData.fuel[fuelIndex];
+                    }
+                } else if (hotspot.label.startsWith('fuelButtonExchange')) {
+                    const fuelIndex = parseInt(hotspot.label.replace('fuelButtonExchange', '')) - 1;
+                    if (fuelIndex < otherPlayerData.fuel.length) {
+                        btn.textContent = otherPlayerData.fuel[fuelIndex];
+                    }
+                } else if (hotspot.label.startsWith('cardButtonExchange')) {
+                    const cardIndex = parseInt(hotspot.label.replace('cardButtonExchange', '')) - 1;
+                    if (cardIndex < otherPlayerData.cards.length) {
+                        btn.textContent = otherPlayerData.cards[cardIndex];
+                    }
                 }
                 
                 // Add click handler
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    handleButtonClick(hotspot, index);
+                    
+                    // Handle fuel card selection
+                    if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
+                        handleFuelCardSelection(hotspot.label, btn);
+                    } else {
+                        handleButtonClick(hotspot, index);
+                    }
                 });
                 
                 return btn;
             }
 
+            function handleFuelCardSelection(fuelLabel, button) {
+                const fuelIndex = parseInt(fuelLabel.replace('fuelButton', '')) - 1;
+                const fuelValue = playerData.fuel[fuelIndex];
+                
+                if (selectedFuelCards.has(fuelLabel)) {
+                    // Deselect
+                    selectedFuelCards.delete(fuelLabel);
+                    button.classList.remove('selected');
+                    gameMessage.textContent = `Player 2 deselected fuel ${fuelValue}`;
+                    console.log(`Player 2 deselected fuel: ${fuelValue}`);
+                } else {
+                    // Select
+                    selectedFuelCards.add(fuelLabel);
+                    button.classList.add('selected');
+                    gameMessage.textContent = `Player 2 selected fuel ${fuelValue}`;
+                    console.log(`Player 2 selected fuel: ${fuelValue}`);
+                }
+                
+                // Update button info
+                buttonInfo.innerHTML = `
+                    <div><strong>Fuel Selection</strong></div>
+                    <div>Selected: ${selectedFuelCards.size} fuel cards</div>
+                    <div>Values: ${Array.from(selectedFuelCards).map(label => {
+                        const idx = parseInt(label.replace('fuelButton', '')) - 1;
+                        return playerData.fuel[idx];
+                    }).join(', ')}</div>
+                `;
+            }
+
             function handleButtonClick(hotspot, index) {
-                console.log(`Clicked: ${hotspot.label} (${index + 1})`);
+                console.log(`Player 2 clicked: ${hotspot.label} (${index + 1})`);
+                
+                // Handle FLY button with fuel consumption
+                if (hotspot.label === 'flyButton') {
+                    handleFlyAction();
+                    return;
+                }
+                
+                // Update game message
+                gameMessage.textContent = `Player 2 used ${hotspot.label} - ${getButtonAction(hotspot.label)}`;
                 
                 // Update button info display
                 buttonInfo.innerHTML = `
                     <div><strong>Button ${index + 1}</strong></div>
                     <div>Label: ${hotspot.label}</div>
-                    <div>Position: ${(hotspot.xPct * 100).toFixed(1)}%, ${(hotspot.yPct * 100).toFixed(1)}%</div>
-                    <div>Size: ${(hotspot.wPct * 100).toFixed(1)}% × ${(hotspot.hPct * 100).toFixed(1)}%</div>
+                    <div>Player: ${playerData.name}</div>
+                    <div>Action: ${getButtonAction(hotspot.label)}</div>
                 `;
                 
                 // Show alert with button details
-                alert(`Button: ${hotspot.label}\nPosition: ${(hotspot.xPct * 100).toFixed(1)}%, ${(hotspot.yPct * 100).toFixed(1)}%\nSize: ${(hotspot.wPct * 100).toFixed(1)}% × ${(hotspot.hPct * 100).toFixed(1)}%`);
+                alert(`Player 2 - ${hotspot.label}\nAction: ${getButtonAction(hotspot.label)}`);
+            }
+
+            function handleFlyAction() {
+                if (selectedFuelCards.size === 0) {
+                    gameMessage.textContent = "Player 2 - No fuel selected! Select fuel cards to fly.";
+                    buttonInfo.innerHTML = `
+                        <div><strong>FLY Action</strong></div>
+                        <div>Status: No fuel selected</div>
+                        <div>Select fuel cards first</div>
+                    `;
+                    return;
+                }
+
+                // Calculate total fuel value and collect used values
+                let totalFuelUsed = 0;
+                const usedFuelValues = [];
+                const fuelIndicesToRemove = [];
+                
+                selectedFuelCards.forEach(fuelLabel => {
+                    const fuelIndex = parseInt(fuelLabel.replace('fuelButton', '')) - 1;
+                    const fuelValue = playerData.fuel[fuelIndex];
+                    totalFuelUsed += fuelValue;
+                    usedFuelValues.push(fuelValue);
+                    fuelIndicesToRemove.push(fuelIndex);
+                });
+
+                // Remove used fuel from player data (in reverse order to maintain indices)
+                fuelIndicesToRemove.sort((a, b) => b - a).forEach(index => {
+                    playerData.fuel.splice(index, 1);
+                });
+
+                // Clear selected fuel cards
+                selectedFuelCards.clear();
+
+                // Update game message
+                gameMessage.textContent = `Player 2 flew using fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`;
+
+                // Update button info
+                buttonInfo.innerHTML = `
+                    <div><strong>FLY Action</strong></div>
+                    <div>Fuel Used: ${usedFuelValues.join(', ')}</div>
+                    <div>Total: ${totalFuelUsed}</div>
+                    <div>Remaining Fuel: ${playerData.fuel.length}</div>
+                `;
+
+                // Update displays
+                updatePlayerDisplay();
+                renderButtons();
+
+                // Save updated data to JSON file
+                savePlayerDataToFile();
+
+                console.log(`Player 2 flew using fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`);
+                console.log('Updated fuel array:', playerData.fuel);
+            }
+
+            function getButtonAction(label) {
+                if (label === 'burnButton') return 'Burn fuel to gain speed';
+                if (label === 'flyButton') return 'Fly to next destination';
+                if (label.includes('card') && !label.includes('Exchange')) return 'Use your card';
+                if (label.includes('fuel') && !label.includes('Exchange')) return 'Use your fuel';
+                if (label.includes('fuelButtonExchange')) return 'Exchange with Player 1 fuel';
+                if (label.includes('cardButtonExchange')) return 'Exchange with Player 1 card';
+                if (label.includes('exchangeCard')) return 'Exchange cards with Player 1';
+                return 'Unknown action';
+            }
+
+            function generateRandomCards() {
+                const cards = [];
+                for (let i = 0; i < 15; i++) {
+                    cards.push(Math.floor(Math.random() * 50) + 1);
+                }
+                return cards;
+            }
+
+            function generateRandomFuel() {
+                const fuel = [];
+                for (let i = 0; i < 5; i++) {
+                    fuel.push(Math.floor(Math.random() * 50) + 1);
+                }
+                return fuel;
+            }
+
+            function savePlayerDataToFile() {
+                const dataToSave = {
+                    name: playerData.name,
+                    cards: playerData.cards,
+                    fuel: playerData.fuel
+                };
+                
+                // Save to localStorage for persistence
+                localStorage.setItem('player2Data', JSON.stringify(dataToSave));
+                
+                // Send signal to other player
+                localStorage.setItem('player2Signal', Date.now().toString());
+                
+                console.log('Player 2 data saved to localStorage');
+            }
+
+            function regeneratePlayerData() {
+                const newCards = generateRandomCards();
+                const newFuel = newCards.slice(0, 5); // First 5 cards as fuel
+                
+                playerData.cards = newCards;
+                playerData.fuel = newFuel;
+                
+                updatePlayerDisplay();
+                renderButtons();
+                
+                // Save regenerated data to file
+                savePlayerDataToFile();
+                
+                console.log('Player 2 data regenerated:', playerData);
+                
+                alert('Player 2 data regenerated! New cards and fuel assigned.');
+            }
+
+            function updatePlayerDisplay() {
+                cardCount.textContent = playerData.cards.length;
+                fuelCount.textContent = playerData.fuel.length;
+                cardsList.innerHTML = playerData.cards.map((card, index) => 
+                    `<span style="margin: 2px; padding: 2px 4px; background: rgba(255,255,255,0.1); border-radius: 3px;">${card}</span>`
+                ).join('');
             }
 
             function renderButtons() {
@@ -512,12 +680,51 @@
                     buttonLayer.appendChild(btn);
                 });
                 
-                buttonCount.textContent = hotspots.length;
-                console.log(`Rendered ${hotspots.length} buttons from layout`);
+                console.log(`Rendered ${hotspots.length} buttons for Player 2`);
             }
 
+            // Load data from localStorage if available
+            function loadPlayerData() {
+                const savedData = localStorage.getItem('player2Data');
+                if (savedData) {
+                    const parsedData = JSON.parse(savedData);
+                    playerData.cards = parsedData.cards;
+                    playerData.fuel = parsedData.fuel;
+                    console.log('Loaded Player 2 data from localStorage:', playerData);
+                }
+            }
+
+            // Listen for signals from other player
+            function listenForPlayer1Signals() {
+                setInterval(() => {
+                    const signal = localStorage.getItem('player1Signal');
+                    if (signal && signal !== lastPlayer1Signal) {
+                        lastPlayer1Signal = signal;
+                        // Player 1 made a move, refresh other player data
+                        const player1Data = localStorage.getItem('player1Data');
+                        if (player1Data) {
+                            const parsedData = JSON.parse(player1Data);
+                            otherPlayerData.cards = parsedData.cards;
+                            otherPlayerData.fuel = parsedData.fuel;
+                            renderButtons(); // Refresh exchange buttons
+                            console.log('Player 1 data updated from signal');
+                        }
+                    }
+                }, 1000); // Check every second
+            }
+
+            let lastPlayer1Signal = localStorage.getItem('player1Signal');
+
             // Initialize
+            loadPlayerData();
+            updatePlayerDisplay();
             renderButtons();
+            
+            // Add regenerate button event listener
+            regenerateBtn.addEventListener('click', regeneratePlayerData);
+            
+            // Start listening for other player signals
+            listenForPlayer1Signals();
             
             // Re-render on window resize to maintain proportions
             window.addEventListener('resize', renderButtons);
@@ -531,15 +738,13 @@
                 return document.querySelectorAll('.btn');
             };
             
-            window.getHotspots = function() {
-                return hotspots;
+            window.getPlayerData = function() {
+                return playerData;
             };
             
-            console.log('=== COSMOS INTERACTIVE LAYOUT ===');
-            console.log(`Loaded ${hotspots.length} buttons from hotspots.json`);
-            console.log('Access buttons: window.getButton("burnButton")');
-            console.log('Get all buttons: window.getAllButtons()');
-            console.log('Get hotspot data: window.getHotspots()');
+            console.log('=== COSMOS PLAYER 2 LAYOUT ===');
+            console.log(`Loaded ${hotspots.length} buttons for Player 2`);
+            console.log('Player data:', playerData);
         })();
     </script>
 </body>
