@@ -257,6 +257,8 @@
     </div>
 
     <button class="regenerate-btn" id="regenerate-btn">🔄 REGENERATE</button>
+    <button class="regenerate-btn" id="update-json-btn" style="top: 60%;">💾 UPDATE JSON</button>
+    <button class="regenerate-btn" id="test-comm-btn" style="top: 80%;">🔍 TEST COMM</button>
 
     <script>
         (function() {
@@ -267,6 +269,8 @@
             const fuelCount = document.getElementById('fuel-count');
             const cardsList = document.getElementById('cards-list');
             const regenerateBtn = document.getElementById('regenerate-btn');
+            const updateJsonBtn = document.getElementById('update-json-btn');
+            const testCommBtn = document.getElementById('test-comm-btn');
             const gameMessage = document.getElementById('game-message');
             
             // Track selected fuel cards
@@ -594,7 +598,8 @@
 
                 // Update displays
                 updatePlayerDisplay();
-                renderButtons();
+                // Don't re-render all buttons, just update the current player's fuel buttons
+                updateCurrentPlayerFuelButtons();
 
                 // Save updated data to JSON file
                 savePlayerDataToFile();
@@ -634,17 +639,34 @@
                 const dataToSave = {
                     name: playerData.name,
                     cards: playerData.cards,
-                    fuel: playerData.fuel
+                    fuel: playerData.fuel,
+                    timestamp: Date.now() // Add timestamp to ensure uniqueness
                 };
                 
-                // Save to localStorage for persistence
-                localStorage.setItem('player2Data', JSON.stringify(dataToSave));
+                // Save to localStorage for cross-browser communication
+                const jsonString = JSON.stringify(dataToSave);
+                localStorage.setItem('player2Data', jsonString);
+                console.log('Player 2 data saved to localStorage:', dataToSave);
                 
-                // Send signal to other player
-                localStorage.setItem('player2Signal', Date.now().toString());
+                // Test if data was actually saved
+                const testData = localStorage.getItem('player2Data');
+                console.log('Player 2 verification - data in localStorage:', testData);
                 
-                console.log('Player 2 data saved to localStorage');
+                // Force a storage event for same-origin communication
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'player2Data',
+                    newValue: jsonString,
+                    oldValue: null,
+                    storageArea: localStorage
+                }));
+                
+                // Update JSON file (this will be handled by the server or manual replacement)
+                console.log('Player 2 data to save to player2.json:', dataToSave);
+                
+                // Show message to user about updating the JSON file
+                gameMessage.textContent = `Player 2 flew! Fuel remaining: ${dataToSave.fuel.length}`;
             }
+
 
             function regeneratePlayerData() {
                 const newCards = generateRandomCards();
@@ -683,48 +705,245 @@
                 console.log(`Rendered ${hotspots.length} buttons for Player 2`);
             }
 
-            // Load data from localStorage if available
-            function loadPlayerData() {
-                const savedData = localStorage.getItem('player2Data');
-                if (savedData) {
-                    const parsedData = JSON.parse(savedData);
-                    playerData.cards = parsedData.cards;
-                    playerData.fuel = parsedData.fuel;
-                    console.log('Loaded Player 2 data from localStorage:', playerData);
+            // Load data from JSON file
+            async function loadPlayerData() {
+                try {
+                    const response = await fetch('player2.json');
+                    if (response.ok) {
+                        const jsonData = await response.json();
+                        playerData.cards = jsonData.cards;
+                        playerData.fuel = jsonData.fuel;
+                        console.log('Loaded Player 2 data from player2.json:', playerData);
+                    } else {
+                        console.log('player2.json not found, using default data');
+                    }
+                } catch (error) {
+                    console.log('Error loading player2.json, using default data:', error);
                 }
             }
 
-            // Listen for signals from other player
-            function listenForPlayer1Signals() {
-                setInterval(() => {
-                    const signal = localStorage.getItem('player1Signal');
-                    if (signal && signal !== lastPlayer1Signal) {
-                        lastPlayer1Signal = signal;
-                        // Player 1 made a move, refresh other player data
-                        const player1Data = localStorage.getItem('player1Data');
-                        if (player1Data) {
-                            const parsedData = JSON.parse(player1Data);
-                            otherPlayerData.cards = parsedData.cards;
-                            otherPlayerData.fuel = parsedData.fuel;
-                            renderButtons(); // Refresh exchange buttons
-                            console.log('Player 1 data updated from signal');
-                        }
+            // Load other player's data once on page load
+            async function loadOtherPlayerData() {
+                try {
+                    const response = await fetch('player1.json');
+                    if (response.ok) {
+                        const jsonData = await response.json();
+                        otherPlayerData.cards = jsonData.cards;
+                        otherPlayerData.fuel = jsonData.fuel;
+                        console.log('Loaded Player 1 data from player1.json:', otherPlayerData);
+                    } else {
+                        console.log('player1.json not found, using default data');
                     }
-                }, 1000); // Check every second
+                } catch (error) {
+                    console.log('Error loading player1.json, using default data:', error);
+                }
             }
 
-            let lastPlayer1Signal = localStorage.getItem('player1Signal');
+            // Real-time cross-browser communication system
+            function setupCrossBrowserCommunication() {
+                console.log('Setting up Player 2 cross-browser communication...');
+                
+                // Listen for localStorage changes from other browser tabs/windows
+                window.addEventListener('storage', (e) => {
+                    console.log('Player 2 storage event:', e.key, e.newValue);
+                    if (e.key === 'player1Data' && e.newValue) {
+                        try {
+                            const updatedData = JSON.parse(e.newValue);
+                            
+                            // Validate that this is actually Player 1's data
+                            if (updatedData.name === 'Player 1') {
+                                console.log('Player 2 received Player 1 data via localStorage:', updatedData);
+                                
+                                // Only update otherPlayerData, never playerData
+                                otherPlayerData.cards = updatedData.cards;
+                                otherPlayerData.fuel = updatedData.fuel;
+                                
+                                // Only update exchange buttons, not all buttons
+                                updateExchangeButtons();
+                                gameMessage.textContent = `Player 1 flew! Fuel remaining: ${updatedData.fuel.length}`;
+                                console.log('Player 2 exchange buttons updated');
+                            } else {
+                                console.log('Player 2 received invalid data via localStorage (not Player 1):', updatedData);
+                            }
+                        } catch (error) {
+                            console.log('Error parsing Player 1 data from localStorage:', error);
+                        }
+                    }
+                });
+
+                // Poll for changes in other player's localStorage (works across different browsers)
+                setInterval(() => {
+                    // Only start polling after initialization is complete
+                    if (!isInitialized) {
+                        return;
+                    }
+                    
+                    try {
+                        const player1Data = localStorage.getItem('player1Data');
+                        if (player1Data) {
+                            const currentDataHash = player1Data;
+                            
+                            if (currentDataHash !== lastPlayer1DataHash) {
+                                console.log('Player 2 detected change in player1Data hash');
+                                console.log('Old hash:', lastPlayer1DataHash);
+                                console.log('New hash:', currentDataHash);
+                                
+                                lastPlayer1DataHash = currentDataHash;
+                                const updatedData = JSON.parse(player1Data);
+                                
+                                // Validate that this is actually Player 1's data
+                                if (updatedData.name === 'Player 1') {
+                                    console.log('Player 2 received Player 1 data via polling:', updatedData);
+                                    
+                                    // Only update otherPlayerData, never playerData
+                                    otherPlayerData.cards = updatedData.cards;
+                                    otherPlayerData.fuel = updatedData.fuel;
+                                    
+                                    // Only update exchange buttons, not all buttons
+                                    updateExchangeButtons();
+                                    gameMessage.textContent = `Player 1 flew! Fuel remaining: ${updatedData.fuel.length}`;
+                                    console.log('Player 2 exchange buttons updated via polling');
+                                } else {
+                                    console.log('Player 2 received invalid data via polling (not Player 1):', updatedData);
+                                }
+                            }
+                        } else {
+                            console.log('Player 2 polling: No player1Data found in localStorage');
+                        }
+                    } catch (error) {
+                        console.log('Error polling player1Data from localStorage:', error);
+                    }
+                }, 1000); // Check every 1 second for faster updates
+            }
+
+            // Function to update only exchange buttons (not all buttons)
+            function updateExchangeButtons() {
+                console.log('Updating exchange buttons with otherPlayerData:', otherPlayerData);
+                
+                // Update only the exchange buttons that show other player's data
+                for (let i = 1; i <= 5; i++) {
+                    const fuelExchangeBtn = document.getElementById(`fuelButtonExchange${i}`);
+                    if (fuelExchangeBtn && i <= otherPlayerData.fuel.length) {
+                        fuelExchangeBtn.textContent = otherPlayerData.fuel[i - 1];
+                        console.log(`Updated fuelButtonExchange${i} to: ${otherPlayerData.fuel[i - 1]}`);
+                    } else if (fuelExchangeBtn) {
+                        fuelExchangeBtn.textContent = '';
+                        console.log(`Cleared fuelButtonExchange${i} (no fuel at index ${i})`);
+                    }
+                }
+                
+                for (let i = 1; i <= 15; i++) {
+                    const cardExchangeBtn = document.getElementById(`cardButtonExchange${i}`);
+                    if (cardExchangeBtn && i <= otherPlayerData.cards.length) {
+                        cardExchangeBtn.textContent = otherPlayerData.cards[i - 1];
+                    }
+                }
+                
+                console.log('Updated exchange buttons only');
+            }
+
+            // Function to update only current player's fuel buttons (not exchange buttons)
+            function updateCurrentPlayerFuelButtons() {
+                // Update only the current player's fuel buttons
+                for (let i = 1; i <= 5; i++) {
+                    const fuelBtn = document.getElementById(`fuelButton${i}`);
+                    if (fuelBtn && i <= playerData.fuel.length) {
+                        fuelBtn.textContent = playerData.fuel[i - 1];
+                    } else if (fuelBtn) {
+                        // Hide button if no fuel at this index
+                        fuelBtn.textContent = '';
+                    }
+                }
+                
+                console.log('Updated current player fuel buttons only');
+            }
+
+            // Function to update JSON file content (for manual replacement)
+            function updateJSONFileContent() {
+                const dataToSave = {
+                    name: playerData.name,
+                    cards: playerData.cards,
+                    fuel: playerData.fuel
+                };
+                
+                // Create a downloadable JSON file with updated content
+                const blob = new Blob([JSON.stringify(dataToSave, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'player2.json';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                gameMessage.textContent = `Downloaded updated player2.json - Replace the file in your project folder`;
+            }
+
+            // Function to test cross-browser communication
+            function testCommunication() {
+                console.log('=== TESTING CROSS-BROWSER COMMUNICATION ===');
+                
+                // Check if Player 1's data exists in localStorage
+                const player1Data = localStorage.getItem('player1Data');
+                console.log('Player 2 checking for player1Data:', player1Data);
+                
+                if (player1Data) {
+                    try {
+                        const parsedData = JSON.parse(player1Data);
+                        console.log('Player 2 found Player 1 data:', parsedData);
+                        gameMessage.textContent = `Found Player 1 data: ${parsedData.fuel.length} fuel cards`;
+                        
+                        // Update otherPlayerData with found data
+                        otherPlayerData.cards = parsedData.cards;
+                        otherPlayerData.fuel = parsedData.fuel;
+                        updateExchangeButtons();
+                        
+                    } catch (error) {
+                        console.log('Player 2 error parsing Player 1 data:', error);
+                        gameMessage.textContent = 'Error parsing Player 1 data';
+                    }
+                } else {
+                    console.log('Player 2 found no player1Data in localStorage');
+                    gameMessage.textContent = 'No Player 1 data found in localStorage';
+                }
+                
+                // Also check current hash
+                console.log('Player 2 current lastPlayer1DataHash:', lastPlayer1DataHash);
+            }
+
+            let lastPlayer1DataHash = '';
+            let isInitialized = false;
 
             // Initialize
-            loadPlayerData();
-            updatePlayerDisplay();
-            renderButtons();
+            loadPlayerData().then(() => {
+                updatePlayerDisplay();
+                renderButtons();
+                
+                // Set initial hash to prevent false triggers on startup
+                const player1Data = localStorage.getItem('player1Data');
+                if (player1Data) {
+                    lastPlayer1DataHash = player1Data;
+                }
+                
+                isInitialized = true;
+                console.log('Player 2 initialized, lastPlayer1DataHash set to:', lastPlayer1DataHash);
+            });
             
-            // Add regenerate button event listener
+            // Load other player data once
+            loadOtherPlayerData().then(() => {
+                // Only update exchange buttons, not all buttons
+                updateExchangeButtons();
+            });
+            
+            // Setup cross-browser communication
+            setupCrossBrowserCommunication();
+            
+            // Add button event listeners
             regenerateBtn.addEventListener('click', regeneratePlayerData);
-            
-            // Start listening for other player signals
-            listenForPlayer1Signals();
+            updateJsonBtn.addEventListener('click', updateJSONFileContent);
+            testCommBtn.addEventListener('click', testCommunication);
             
             // Re-render on window resize to maintain proportions
             window.addEventListener('resize', renderButtons);

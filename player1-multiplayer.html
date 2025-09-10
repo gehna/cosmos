@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmos Player 1 - Multiplayer</title>
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --text: #e6e8ee;
+            --muted: #98a2b3;
+            --primary: #7c5cff;
+            --primary-600: #6b4bff;
+            --accent: #22d3ee;
+            --player-color: #00ff88;
+            --radius: 14px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .layout-container {
+            position: relative;
+            width: 375px;
+            height: 812px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            background: url('firsts-screen.png') no-repeat center center;
+            background-size: cover;
+        }
+
+        .button-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .btn {
+            position: absolute;
+            -webkit-tap-highlight-color: transparent;
+            appearance: none;
+            border: 0;
+            background: rgba(124, 92, 255, 0.8);
+            border: 2px solid rgba(124, 92, 255, 1);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+            min-height: 20px;
+            min-width: 20px;
+        }
+
+        .btn:hover { 
+            background: rgba(124, 92, 255, 0.5);
+            border-color: rgba(124, 92, 255, 0.8);
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(124, 92, 255, 0.3);
+        }
+        
+        .btn:active { 
+            transform: scale(0.98);
+            background: rgba(124, 92, 255, 0.7);
+        }
+
+        /* Different button types */
+        .btn.burn, .btn.fly {
+            background: rgba(34, 211, 238, 0.3);
+            border-color: rgba(34, 211, 238, 0.6);
+        }
+        .btn.burn:hover, .btn.fly:hover {
+            background: rgba(34, 211, 238, 0.5);
+            border-color: rgba(34, 211, 238, 0.8);
+        }
+
+        .btn.card {
+            background: rgba(255, 193, 7, 0.3);
+            border-color: rgba(255, 193, 7, 0.6);
+        }
+        .btn.card:hover {
+            background: rgba(255, 193, 7, 0.5);
+            border-color: rgba(255, 193, 7, 0.8);
+        }
+
+        .btn.fuel {
+            background: rgba(40, 167, 69, 0.3);
+            border-color: rgba(40, 167, 69, 0.6);
+        }
+        .btn.fuel:hover {
+            background: rgba(40, 167, 69, 0.5);
+            border-color: rgba(40, 167, 69, 0.8);
+        }
+
+        .btn.fuel.selected {
+            background: rgba(40, 167, 69, 0.9);
+            border-color: #ffd700;
+            border-width: 3px;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            transform: scale(1.1);
+        }
+
+        .btn.exchange {
+            background: rgba(220, 53, 69, 0.3);
+            border-color: rgba(220, 53, 69, 0.6);
+        }
+        .btn.exchange:hover {
+            background: rgba(220, 53, 69, 0.5);
+            border-color: rgba(220, 53, 69, 0.8);
+        }
+
+        .player-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: var(--player-color);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+            border: 1px solid var(--player-color);
+        }
+
+        .button-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+
+
+        .game-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: 2px solid var(--player-color);
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1000;
+            max-width: 80%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .player-info {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            background: var(--player-bg);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid var(--player-color);
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .button-info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid var(--player-color);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .regenerate-btn {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: rgba(40, 167, 69, 0.9);
+            border: 2px solid #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .regenerate-btn:hover {
+            background: rgba(40, 167, 69, 1);
+            transform: translateY(-50%) scale(1.05);
+        }
+
+        .cards-display {
+            position: fixed;
+            top: 200px;
+            left: 20px;
+            background: var(--player-bg);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid var(--player-color);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .connected {
+            background: rgba(40, 167, 69, 0.8);
+            border: 2px solid #28a745;
+        }
+
+        .disconnected {
+            background: rgba(220, 53, 69, 0.8);
+            border: 2px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="layout-container">
+            <div class="button-layer" id="button-layer"></div>
+        </div>
+    </div>
+
+    <div class="game-message" id="game-message">
+        Player 1 - Connecting to server...
+    </div>
+
+    <div class="player-info">
+        <div><strong>Player 1</strong></div>
+        <div>Cards: <span id="card-count">15</span></div>
+        <div>Fuel: <span id="fuel-count">5</span></div>
+    </div>
+
+    <div class="button-info" id="button-info">
+        <div>Click a button to see details</div>
+    </div>
+
+    <script>
+        (function() {
+            const buttonLayer = document.getElementById('button-layer');
+            const buttonInfo = document.getElementById('button-info');
+            const layoutContainer = document.querySelector('.layout-container');
+            const cardCount = document.getElementById('card-count');
+            const fuelCount = document.getElementById('fuel-count');
+            const cardsList = document.getElementById('cards-list');
+            const regenerateBtn = document.getElementById('regenerate-btn');
+            const gameMessage = document.getElementById('game-message');
+            const connectionStatus = document.getElementById('connection-status');
+            
+            // Track selected fuel cards
+            let selectedFuelCards = new Set();
+            
+            // Player data
+            let playerData = {
+                name: "Player 1",
+                cards: [],
+                fuel: []
+            };
+
+            // Other player data (Player 2)
+            let otherPlayerData = {
+                name: "Player 2",
+                cards: [],
+                fuel: []
+            };
+
+            // Server communication
+            const SERVER_URL = 'http://localhost:8080';
+            let isConnected = false;
+            let pollInterval;
+
+            // Your hotspot data
+            const hotspots = [
+                {"xPct": 0.1, "yPct": 0.1, "wPct": 0.08, "hPct": 0.05, "label": "burnButton", "href": ""},
+                {"xPct": 0.2, "yPct": 0.1, "wPct": 0.08, "hPct": 0.05, "label": "flyButton", "href": ""},
+                {"xPct": 0.3, "yPct": 0.1, "wPct": 0.08, "hPct": 0.05, "label": "fuelButton1", "href": ""},
+                {"xPct": 0.4, "yPct": 0.1, "wPct": 0.08, "hPct": 0.05, "label": "fuelButton2", "href": ""},
+                {"xPct": 0.5, "yPct": 0.1, "wPct": 0.08, "hPct": 0.05, "label": "fuelButton3", "href": ""},
+                {"xPct": 0.6, "yPct": 0.1, "wPct": 0.08, "hPct": 0.05, "label": "fuelButton4", "href": ""},
+                {"xPct": 0.7, "yPct": 0.1, "wPct": 0.08, "hPct": 0.05, "label": "fuelButton5", "href": ""},
+                {"xPct": 0.1, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton1", "href": ""},
+                {"xPct": 0.2, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton2", "href": ""},
+                {"xPct": 0.3, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton3", "href": ""},
+                {"xPct": 0.4, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton4", "href": ""},
+                {"xPct": 0.5, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton5", "href": ""},
+                {"xPct": 0.6, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton6", "href": ""},
+                {"xPct": 0.7, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton7", "href": ""},
+                {"xPct": 0.8, "yPct": 0.2, "wPct": 0.08, "hPct": 0.05, "label": "cardButton8", "href": ""},
+                {"xPct": 0.1, "yPct": 0.3, "wPct": 0.08, "hPct": 0.05, "label": "cardButton9", "href": ""},
+                {"xPct": 0.2, "yPct": 0.3, "wPct": 0.08, "hPct": 0.05, "label": "cardButton10", "href": ""},
+                {"xPct": 0.3, "yPct": 0.3, "wPct": 0.08, "hPct": 0.05, "label": "cardButton11", "href": ""},
+                {"xPct": 0.4, "yPct": 0.3, "wPct": 0.08, "hPct": 0.05, "label": "cardButton12", "href": ""},
+                {"xPct": 0.5, "yPct": 0.3, "wPct": 0.08, "hPct": 0.05, "label": "cardButton13", "href": ""},
+                {"xPct": 0.6, "yPct": 0.3, "wPct": 0.08, "hPct": 0.05, "label": "cardButton14", "href": ""},
+                {"xPct": 0.7, "yPct": 0.3, "wPct": 0.08, "hPct": 0.05, "label": "cardButton15", "href": ""},
+                // Exchange buttons for Player 2's data
+                {"xPct": 0.1, "yPct": 0.8, "wPct": 0.08, "hPct": 0.05, "label": "fuelButtonExchange1", "href": ""},
+                {"xPct": 0.2, "yPct": 0.8, "wPct": 0.08, "hPct": 0.05, "label": "fuelButtonExchange2", "href": ""},
+                {"xPct": 0.3, "yPct": 0.8, "wPct": 0.08, "hPct": 0.05, "label": "fuelButtonExchange3", "href": ""},
+                {"xPct": 0.4, "yPct": 0.8, "wPct": 0.08, "hPct": 0.05, "label": "fuelButtonExchange4", "href": ""},
+                {"xPct": 0.5, "yPct": 0.8, "wPct": 0.08, "hPct": 0.05, "label": "fuelButtonExchange5", "href": ""},
+                {"xPct": 0.1, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange1", "href": ""},
+                {"xPct": 0.2, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange2", "href": ""},
+                {"xPct": 0.3, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange3", "href": ""},
+                {"xPct": 0.4, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange4", "href": ""},
+                {"xPct": 0.5, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange5", "href": ""},
+                {"xPct": 0.6, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange6", "href": ""},
+                {"xPct": 0.7, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange7", "href": ""},
+                {"xPct": 0.8, "yPct": 0.9, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange8", "href": ""},
+                {"xPct": 0.1, "yPct": 0.95, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange9", "href": ""},
+                {"xPct": 0.2, "yPct": 0.95, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange10", "href": ""},
+                {"xPct": 0.3, "yPct": 0.95, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange11", "href": ""},
+                {"xPct": 0.4, "yPct": 0.95, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange12", "href": ""},
+                {"xPct": 0.5, "yPct": 0.95, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange13", "href": ""},
+                {"xPct": 0.6, "yPct": 0.95, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange14", "href": ""},
+                {"xPct": 0.7, "yPct": 0.95, "wPct": 0.08, "hPct": 0.05, "label": "cardButtonExchange15", "href": ""}
+            ];
+
+            // Server communication functions
+            async function loadGameData() {
+                try {
+                    const response = await fetch(`${SERVER_URL}/api/game-data`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        playerData = data.player1;
+                        otherPlayerData = data.player2;
+                        updateConnectionStatus(true);
+                        console.log('Game data loaded:', data);
+                        return true;
+                    } else {
+                        throw new Error('Failed to load game data');
+                    }
+                } catch (error) {
+                    console.error('Error loading game data:', error);
+                    updateConnectionStatus(false);
+                    return false;
+                }
+            }
+
+            async function savePlayerData() {
+                console.log('💾 SAVING PLAYER DATA TO SERVER...');
+                console.log('Server URL:', SERVER_URL);
+                console.log('Data to send:', { cards: playerData.cards, fuel: playerData.fuel });
+                
+                try {
+                    const response = await fetch(`${SERVER_URL}/api/update-player/player1`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            cards: playerData.cards,
+                            fuel: playerData.fuel
+                        })
+                    });
+                    
+                    console.log('📡 Server response status:', response.status);
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Player 1 data saved:', result);
+                        return true;
+                    } else {
+                        throw new Error('Failed to save player data');
+                    }
+                } catch (error) {
+                    console.error('Error saving player data:', error);
+                    updateConnectionStatus(false);
+                    return false;
+                }
+            }
+
+            function updateConnectionStatus(connected) {
+                isConnected = connected;
+                if (connected) {
+                    connectionStatus.textContent = 'Connected';
+                    connectionStatus.className = 'connection-status connected';
+                } else {
+                    connectionStatus.textContent = 'Disconnected';
+                    connectionStatus.className = 'connection-status disconnected';
+                }
+            }
+
+            // Start polling for game updates
+            function startPolling() {
+                pollInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch(`${SERVER_URL}/api/game-data`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            const oldOtherPlayerData = JSON.stringify(otherPlayerData);
+                            otherPlayerData = data.player2;
+                            
+                            // Check if other player's data changed
+                            if (oldOtherPlayerData !== JSON.stringify(otherPlayerData)) {
+                                console.log('Player 2 data updated:', otherPlayerData);
+                                updateExchangeButtons();
+                                gameMessage.textContent = `Player 2 flew! Fuel remaining: ${otherPlayerData.fuel.length}`;
+                            }
+                            
+                            updateConnectionStatus(true);
+                        } else {
+                            updateConnectionStatus(false);
+                        }
+                    } catch (error) {
+                        console.error('Polling error:', error);
+                        updateConnectionStatus(false);
+                    }
+                }, 1000); // Poll every second
+            }
+
+            function getButtonType(label) {
+                if (label.includes('burn') || label.includes('fly')) return 'burn';
+                if (label.includes('card') && !label.includes('Exchange')) return 'card';
+                if (label.includes('fuel') && !label.includes('Exchange')) return 'fuel';
+                if (label.includes('exchange')) return 'exchange';
+                return 'default';
+            }
+
+            function createButton(hotspot, index) {
+                const btn = document.createElement('button');
+                btn.className = `btn ${getButtonType(hotspot.label)}`;
+                btn.id = hotspot.label;
+                btn.title = hotspot.label;
+                
+                const layoutDims = getLayoutDimensions();
+                const x = hotspot.xPct * layoutDims.width;
+                const y = hotspot.yPct * layoutDims.height;
+                const w = hotspot.wPct * layoutDims.width;
+                const h = hotspot.yPct * layoutDims.height;
+                
+                btn.style.left = x + 'px';
+                btn.style.top = y + 'px';
+                btn.style.width = w + 'px';
+                btn.style.height = h + 'px';
+                
+                // Add text content to buttons
+                if (hotspot.label === 'burnButton') {
+                    btn.textContent = 'BURN';
+                } else if (hotspot.label === 'flyButton') {
+                    btn.textContent = 'FLY';
+                } else if (hotspot.label.startsWith('cardButton') && !hotspot.label.includes('Exchange')) {
+                    const cardIndex = parseInt(hotspot.label.replace('cardButton', '')) - 1;
+                    if (cardIndex < playerData.cards.length) {
+                        btn.textContent = playerData.cards[cardIndex];
+                    }
+                } else if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
+                    const fuelIndex = parseInt(hotspot.label.replace('fuelButton', '')) - 1;
+                    if (fuelIndex < playerData.fuel.length) {
+                        btn.textContent = playerData.fuel[fuelIndex];
+                    }
+                } else if (hotspot.label.startsWith('fuelButtonExchange')) {
+                    const fuelIndex = parseInt(hotspot.label.replace('fuelButtonExchange', '')) - 1;
+                    if (fuelIndex < otherPlayerData.fuel.length) {
+                        btn.textContent = otherPlayerData.fuel[fuelIndex];
+                    }
+                } else if (hotspot.label.startsWith('cardButtonExchange')) {
+                    const cardIndex = parseInt(hotspot.label.replace('cardButtonExchange', '')) - 1;
+                    if (cardIndex < otherPlayerData.cards.length) {
+                        btn.textContent = otherPlayerData.cards[cardIndex];
+                    }
+                }
+                
+                // Add event listeners
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    handleButtonClick(hotspot, index);
+                });
+                
+                return btn;
+            }
+
+            function getLayoutDimensions() {
+                const rect = layoutContainer.getBoundingClientRect();
+                return {
+                    left: 0,
+                    top: 0,
+                    width: rect.width,
+                    height: rect.height
+                };
+            }
+
+            function handleButtonClick(hotspot, index) {
+                console.log(`🎯 Player 1 clicked: ${hotspot.label} (${index + 1})`);
+                
+                if (hotspot.label === 'flyButton') {
+                    console.log('🚀 FLY BUTTON CLICKED - Calling handleFlyAction');
+                    handleFlyAction();
+                    return;
+                }
+                
+                if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
+                    handleFuelCardSelection(hotspot.label);
+                    return;
+                }
+                
+                gameMessage.textContent = `Player 1 used ${hotspot.label}`;
+                buttonInfo.innerHTML = `
+                    <div><strong>Button ${index + 1}</strong></div>
+                    <div>Label: ${hotspot.label}</div>
+                    <div>Player: ${playerData.name}</div>
+                `;
+            }
+
+            function handleFuelCardSelection(fuelLabel) {
+                const fuelBtn = document.getElementById(fuelLabel);
+                
+                if (selectedFuelCards.has(fuelLabel)) {
+                    // Deselect
+                    selectedFuelCards.delete(fuelLabel);
+                    fuelBtn.classList.remove('selected');
+                } else {
+                    // Select
+                    selectedFuelCards.add(fuelLabel);
+                    fuelBtn.classList.add('selected');
+                }
+                
+                const selectedValues = Array.from(selectedFuelCards).map(label => {
+                    const index = parseInt(label.replace('fuelButton', '')) - 1;
+                    return playerData.fuel[index];
+                });
+                
+                gameMessage.textContent = `Selected fuel: ${selectedValues.join(', ')}`;
+                buttonInfo.innerHTML = `
+                    <div><strong>Fuel Selection</strong></div>
+                    <div>Selected: ${selectedFuelCards.size} cards</div>
+                    <div>Values: ${selectedValues.join(', ')}</div>
+                `;
+            }
+
+            async function handleFlyAction() {
+                console.log('🚀 FLY BUTTON CLICKED - Starting handleFlyAction');
+                console.log('Selected fuel cards:', selectedFuelCards);
+                console.log('Player data before:', playerData);
+                
+                if (selectedFuelCards.size === 0) {
+                    console.log('❌ No fuel selected');
+                    gameMessage.textContent = "No fuel selected! Select fuel cards to fly.";
+                    return;
+                }
+
+                // Calculate total fuel value and collect used values
+                let totalFuelUsed = 0;
+                const usedFuelValues = [];
+                const fuelIndicesToRemove = [];
+                
+                selectedFuelCards.forEach(fuelLabel => {
+                    const fuelIndex = parseInt(fuelLabel.replace('fuelButton', '')) - 1;
+                    const fuelValue = playerData.fuel[fuelIndex];
+                    totalFuelUsed += fuelValue;
+                    usedFuelValues.push(fuelValue);
+                    fuelIndicesToRemove.push(fuelIndex);
+                });
+
+                // Remove used fuel from player data (in reverse order to maintain indices)
+                fuelIndicesToRemove.sort((a, b) => b - a).forEach(index => {
+                    playerData.fuel.splice(index, 1);
+                });
+
+                // Clear selected fuel cards
+                selectedFuelCards.clear();
+
+                // Update game message
+                gameMessage.textContent = `Player 1 flew using fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`;
+
+                // Update displays
+                updatePlayerDisplay();
+                updateCurrentPlayerFuelButtons();
+
+                // Save updated data to server
+                const success = await savePlayerData();
+                if (success) {
+                    console.log(`Player 1 flew using fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`);
+                } else {
+                    gameMessage.textContent = "Error saving data to server!";
+                }
+            }
+
+            function updatePlayerDisplay() {
+                cardCount.textContent = playerData.cards.length;
+                fuelCount.textContent = playerData.fuel.length;
+                cardsList.innerHTML = playerData.cards.map((card, index) => 
+                    `<span style="margin: 2px; padding: 2px 4px; background: rgba(255,255,255,0.1); border-radius: 3px;">${card}</span>`
+                ).join('');
+            }
+
+            function updateCurrentPlayerFuelButtons() {
+                for (let i = 1; i <= 5; i++) {
+                    const fuelBtn = document.getElementById(`fuelButton${i}`);
+                    if (fuelBtn && i <= playerData.fuel.length) {
+                        fuelBtn.textContent = playerData.fuel[i - 1];
+                    } else if (fuelBtn) {
+                        fuelBtn.textContent = '';
+                    }
+                }
+            }
+
+            function updateExchangeButtons() {
+                for (let i = 1; i <= 5; i++) {
+                    const fuelExchangeBtn = document.getElementById(`fuelButtonExchange${i}`);
+                    if (fuelExchangeBtn && i <= otherPlayerData.fuel.length) {
+                        fuelExchangeBtn.textContent = otherPlayerData.fuel[i - 1];
+                    }
+                }
+                
+                for (let i = 1; i <= 15; i++) {
+                    const cardExchangeBtn = document.getElementById(`cardButtonExchange${i}`);
+                    if (cardExchangeBtn && i <= otherPlayerData.cards.length) {
+                        cardExchangeBtn.textContent = otherPlayerData.cards[i - 1];
+                    }
+                }
+            }
+
+            function renderButtons() {
+                buttonLayer.innerHTML = '';
+                
+                hotspots.forEach((hotspot, index) => {
+                    const btn = createButton(hotspot, index);
+                    buttonLayer.appendChild(btn);
+                });
+                
+                console.log(`Rendered ${hotspots.length} buttons for Player 1`);
+            }
+
+            async function regeneratePlayerData() {
+                const newCards = Array.from({length: 15}, () => Math.floor(Math.random() * 50) + 1);
+                const newFuel = newCards.slice(0, 5);
+                
+                playerData.cards = newCards;
+                playerData.fuel = newFuel;
+                
+                updatePlayerDisplay();
+                renderButtons();
+                
+                const success = await savePlayerData();
+                if (success) {
+                    gameMessage.textContent = 'Player 1 data regenerated!';
+                    console.log('Player 1 data regenerated:', playerData);
+                } else {
+                    gameMessage.textContent = 'Error regenerating data!';
+                }
+            }
+
+            // Initialize game
+            async function initializeGame() {
+                console.log('Initializing Player 1 multiplayer game...');
+                
+                // Load initial game data
+                const loaded = await loadGameData();
+                if (loaded) {
+                    updatePlayerDisplay();
+                    renderButtons();
+                    startPolling();
+                    gameMessage.textContent = 'Player 1 - Ready to Play!';
+                } else {
+                    gameMessage.textContent = 'Failed to connect to server!';
+                }
+            }
+
+            // Event listeners
+            regenerateBtn.addEventListener('click', regeneratePlayerData);
+
+            // Initialize
+            initializeGame();
+
+            // Re-render on window resize
+            window.addEventListener('resize', renderButtons);
+
+            console.log('=== COSMOS PLAYER 1 MULTIPLAYER ===');
+            console.log('Server URL:', SERVER_URL);
+        })();
+    </script>
+</body>
+</html>
