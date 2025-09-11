@@ -398,6 +398,27 @@
                 return cardSlots[idx] != null ? cardSlots[idx] : '';
             }
 
+            // Exchange mapping mirrors the main card mapping rules
+            function mapExchangeLabelToSlotIndex(label) {
+                const num = parseInt(label.replace('cardButtonExchange', ''));
+                if (Number.isNaN(num)) return null;
+                if (num >= 1 && num <= 7) {
+                    // Top-equivalent row: 1 -> 9 (index 8), 7 -> 15 (index 14)
+                    return 8 + (num - 1);
+                }
+                if (num >= 8 && num <= 15) {
+                    // Bottom-equivalent row: 8 -> index 0 (first), 15 -> index 7 (eighth)
+                    return num - 8;
+                }
+                return null;
+            }
+
+            function getExchangeValueForLabel(label, cardSlots) {
+                const idx = mapExchangeLabelToSlotIndex(label);
+                if (idx == null) return '';
+                return cardSlots[idx] != null ? cardSlots[idx] : '';
+            }
+
             function getSelectedTopCardsSorted() {
                 return [...selectedTopCards].sort((a, b) => {
                     const na = parseInt(a.replace('cardButton',''));
@@ -407,6 +428,11 @@
             }
 
             function getMappedCardLabel(label) {
+                if (label.startsWith('cardButtonExchange')) {
+                    const idxEx = mapExchangeLabelToSlotIndex(label);
+                    if (idxEx == null) return label;
+                    return `cardButtonExchange${idxEx + 1}`;
+                }
                 const idx = mapCardLabelToSlotIndex(label);
                 if (idx == null) return label;
                 return `cardButton${idx + 1}`;
@@ -416,7 +442,7 @@
                 const btn = document.createElement('button');
                 btn.className = `btn ${getButtonType(hotspot.label)}`;
                 btn.id = hotspot.label;
-                btn.title = hotspot.label.startsWith('cardButton') ? getMappedCardLabel(hotspot.label) : hotspot.label;
+                btn.title = (hotspot.label.startsWith('cardButton') || hotspot.label.startsWith('cardButtonExchange')) ? getMappedCardLabel(hotspot.label) : hotspot.label;
                 
                 // Get layout container dimensions
                 const layoutDims = getLayoutDimensions();
@@ -554,10 +580,9 @@
                         btn.textContent = otherPlayerData.fuel[fuelIndex];
                     }
                 } else if (hotspot.label.startsWith('cardButtonExchange')) {
-                    const cardIndex = parseInt(hotspot.label.replace('cardButtonExchange', '')) - 1;
-                    if (cardIndex < otherPlayerData.cards.length) {
-                        btn.textContent = otherPlayerData.cards[cardIndex];
-                    }
+                    const exSlots = computeCardSlots(otherPlayerData.cards);
+                    const value = getExchangeValueForLabel(hotspot.label, exSlots);
+                    if (value !== '') btn.textContent = value;
                 }
                 
                 // Add click handler
@@ -667,7 +692,7 @@
                 // Update button info display
                 buttonInfo.innerHTML = `
                     <div><strong>Button ${index + 1}</strong></div>
-                    <div>Label: ${hotspot.label.startsWith('cardButton') ? getMappedCardLabel(hotspot.label) : hotspot.label}</div>
+                    <div>Label: ${(hotspot.label.startsWith('cardButton') || hotspot.label.startsWith('cardButtonExchange')) ? getMappedCardLabel(hotspot.label) : hotspot.label}</div>
                     <div>Player: ${playerData.name}</div>
                     <div>Action: ${getButtonAction(hotspot.label)}</div>
                 `;
