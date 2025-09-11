@@ -670,9 +670,12 @@
             function handleButtonClick(hotspot, index) {
                 console.log(`Player 1 clicked: ${hotspot.label} (${index + 1})`);
                 
-                // Handle FLY button with fuel consumption
+                // Handle FLY/BURN buttons with fuel consumption
                 if (hotspot.label === 'flyButton') {
                     handleFlyAction();
+                    return;
+                } else if (hotspot.label === 'burnButton') {
+                    handleBurnAction();
                     return;
                 }
                 
@@ -763,6 +766,64 @@
                 savePlayerDataToFile();
 
                 console.log(`Player 1 flew using fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`);
+                console.log('Updated fuel array:', playerData.fuel);
+            }
+
+            function handleBurnAction() {
+                if (selectedFuelCards.size === 0) {
+                    gameMessage.textContent = "Player 1 - No fuel selected! Select fuel cards to burn.";
+                    buttonInfo.innerHTML = `
+                        <div><strong>BURN Action</strong></div>
+                        <div>Status: No fuel selected</div>
+                        <div>Select fuel cards first</div>
+                    `;
+                    return;
+                }
+
+                let totalFuelUsed = 0;
+                const usedFuelValues = [];
+                const fuelIndicesToRemove = [];
+                
+                selectedFuelCards.forEach(fuelLabel => {
+                    const fuelIndex = parseInt(fuelLabel.replace('fuelButton', '')) - 1;
+                    const fuelValue = playerData.fuel[fuelIndex];
+                    totalFuelUsed += fuelValue;
+                    usedFuelValues.push(fuelValue);
+                    fuelIndicesToRemove.push(fuelIndex);
+                });
+
+                fuelIndicesToRemove.sort((a, b) => b - a).forEach(index => {
+                    playerData.fuel.splice(index, 1);
+                });
+
+                selectedFuelCards.clear();
+
+                // Refill emptied fuel slots from the cards row starting from the first card (1..N)
+                {
+                    const need = Math.max(0, 5 - playerData.fuel.length);
+                    if (need > 0 && playerData.cards.length > 0) {
+                        const takeCount = Math.min(need, playerData.cards.length);
+                        const taken = playerData.cards.slice(0, takeCount);
+                        playerData.fuel.push(...taken);
+                        playerData.cards.splice(0, takeCount);
+                    }
+                }
+
+                gameMessage.textContent = `Player 1 burned fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`;
+
+                buttonInfo.innerHTML = `
+                    <div><strong>BURN Action</strong></div>
+                    <div>Fuel Burned: ${usedFuelValues.join(', ')}</div>
+                    <div>Total: ${totalFuelUsed}</div>
+                    <div>Remaining Fuel: ${playerData.fuel.length}</div>
+                `;
+
+                updatePlayerDisplay();
+                renderButtons();
+
+                savePlayerDataToFile();
+
+                console.log(`Player 1 burned fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`);
                 console.log('Updated fuel array:', playerData.fuel);
             }
 
