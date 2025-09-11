@@ -149,6 +149,24 @@
             background: rgba(220, 53, 69, 0.5);
             border-color: rgba(220, 53, 69, 0.8);
         }
+        .btn.exchange.selected {
+            background: rgba(34, 211, 238, 0.6);
+            border-color: rgba(34, 211, 238, 0.9);
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+        }
+        .btn.exchange.disabled {
+            background: rgba(128, 128, 128, 0.3);
+            border-color: rgba(128, 128, 128, 0.6);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
 
         .player-info {
             position: fixed;
@@ -281,10 +299,25 @@
             const socket = io();
             const playerId = 'player1';
             
+            // Debug WebSocket connection
+            socket.on('connect', () => {
+                console.log('Player 1 WebSocket connected:', socket.id);
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('Player 1 WebSocket disconnected');
+            });
+            
             // Track selected fuel cards
             let selectedFuelCards = new Set();
             // Track selected top-row card buttons (labels 'cardButton1' .. 'cardButton7') in selection order
             let selectedTopCards = [];
+
+            // Exchange state
+            let isExchangeActive = false;
+            let myExchangeSelectedFuelIndex = null;
+            let myExchangeOfferedValue = null;
+            let incomingExchangeValue = null; // value offered by the other player
             
             // Player data
             let playerData = {
@@ -544,8 +577,16 @@
                 const cardSlots = computeCardSlots(playerData.cards);
                 if (hotspot.label === 'burnButton') {
                     btn.textContent = 'BURN';
+                    // Disable during exchange
+                    if (isExchangeActive || incomingExchangeValue != null) {
+                        btn.disabled = true;
+                    }
                 } else if (hotspot.label === 'flyButton') {
                     btn.textContent = 'FLY';
+                    // Disable during exchange
+                    if (isExchangeActive || incomingExchangeValue != null) {
+                        btn.disabled = true;
+                    }
                 } else if (hotspot.label.startsWith('cardButton') && parseInt(hotspot.label.replace('cardButton', '')) <= 15) {
                     const num = parseInt(hotspot.label.replace('cardButton', ''));
                     // If top-row card (1..7) and selected, override with values from 8.. based on LEFT-TO-RIGHT order
@@ -583,15 +624,46 @@
                     const exSlots = computeCardSlots(otherPlayerData.cards);
                     const value = getExchangeValueForLabel(hotspot.label, exSlots);
                     if (value !== '') btn.textContent = value;
+                } else if (hotspot.label === 'exchangeCard1') {
+                    // Show my offered value (my card for exchange)
+                    if (myExchangeOfferedValue != null) {
+                        btn.textContent = String(myExchangeOfferedValue);
+                    } else {
+                        btn.textContent = '';
+                    }
+                    // Add selected class if exchange is active
+                    if (isExchangeActive) {
+                        btn.classList.add('selected');
+                    }
+                } else if (hotspot.label === 'exchangeCard2') {
+                    // Show partner's offered value (partner's card for exchange)
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                    if (incomingExchangeValue != null) {
+                        btn.textContent = String(incomingExchangeValue);
+                        btn.classList.add('selected');
+                    } else {
+                        btn.textContent = '';
+                    }
                 }
                 
                 // Add click handler
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    // Don't handle clicks for disabled exchangeCard2
+                    if (hotspot.label === 'exchangeCard2') {
+                        return;
+                    }
                     
-                    // Handle fuel card selection
+                    // Handle fuel card selection or exchange flow
                     if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
-                        handleFuelCardSelection(hotspot.label, btn);
+                        if (isExchangeActive) {
+                            handleExchangeFuelSelection(hotspot.label, btn);
+                        } else {
+                            handleFuelCardSelection(hotspot.label, btn);
+                        }
+                    } else if (hotspot.label === 'exchangeCard1') {
+                        toggleExchange(btn);
                     } else if (hotspot.label.startsWith('cardButton')) {
                         handleTopCardSelection(hotspot.label, btn);
                     } else {
@@ -637,6 +709,85 @@
                     <div>Selected: ${selectedFuelCards.size} fuel cards</div>
                     <div>Values: ${selectedFuelValues.join(', ')}</div>
                 `;
+            }
+
+            function toggleExchange(exchangeBtn) {
+                isExchangeActive = !isExchangeActive;
+                myExchangeSelectedFuelIndex = null;
+                myExchangeOfferedValue = null;
+                incomingExchangeValue = null;
+
+                if (isExchangeActive) {
+                    exchangeBtn.classList.add('selected');
+                    setActionButtonsDisabled(true);
+                    gameMessage.textContent = 'Player 1 started exchange: select a fuel card to offer';
+                } else {
+                    exchangeBtn.classList.remove('selected');
+                    setActionButtonsDisabled(false);
+                    gameMessage.textContent = 'Player 1 cancelled exchange';
+                    socket.emit('exchangeReset', { from: playerId });
+                }
+            }
+
+            function setActionButtonsDisabled(disabled) {
+                const burn = document.getElementById('burnButton');
+                const fly = document.getElementById('flyButton');
+                if (burn) burn.disabled = disabled;
+                if (fly) fly.disabled = disabled;
+            }
+
+            function handleExchangeFuelSelection(fuelLabel, button) {
+                if (!isExchangeActive) {
+                    // Auto-start exchange if user forgot to click exchangeCard1
+                    isExchangeActive = true;
+                    setActionButtonsDisabled(true);
+                    // Update exchangeCard1 visual state
+                    const ex1 = document.getElementById('exchangeCard1');
+                    if (ex1) {
+                        ex1.classList.add('selected');
+                    }
+                }
+                const idx = parseInt(fuelLabel.replace('fuelButton','')) - 1;
+                if (idx < 0 || idx >= playerData.fuel.length) return;
+                myExchangeSelectedFuelIndex = idx;
+                myExchangeOfferedValue = playerData.fuel[idx];
+                
+                // Check if we have an incoming exchange value (we're responding to an offer)
+                if (incomingExchangeValue != null) {
+                    // We're responding to an offer, send exchangeAccept
+                    gameMessage.textContent = `Player 1 accepted exchange: ${myExchangeOfferedValue} for ${incomingExchangeValue}`;
+                    console.log('Player 1 SENDING exchangeAccept:', { from: playerId, responderValue: myExchangeOfferedValue });
+                    socket.emit('exchangeAccept', { from: playerId, responderValue: myExchangeOfferedValue });
+                    console.log('Player 1 exchangeAccept SENT');
+                    
+                    // Also perform the exchange locally for the responder
+                    console.log('Player 1 performing local exchange - before swap - fuel:', playerData.fuel);
+                    playerData.fuel[myExchangeSelectedFuelIndex] = incomingExchangeValue;
+                    console.log('Player 1 performing local exchange - after swap - fuel:', playerData.fuel);
+                    
+                    // Reset exchange UI and enable buttons
+                    finalizeExchangeUI();
+                    
+                    // Update display and save data
+                    updatePlayerDisplay();
+                    renderButtons();
+                    savePlayerDataToFile();
+                } else {
+                    // We're initiating an exchange, send exchangeOffer
+                    gameMessage.textContent = `Player 1 offered fuel ${myExchangeOfferedValue}. Waiting Player 2...`;
+                    console.log('Player 1 SENDING exchangeOffer:', { from: playerId, value: myExchangeOfferedValue });
+                    socket.emit('exchangeOffer', { from: playerId, value: myExchangeOfferedValue });
+                    console.log('Player 1 exchangeOffer SENT');
+                    // Immediately show our offer on exchangeCard1
+                    const ex1 = document.getElementById('exchangeCard1');
+                    if (ex1) {
+                        ex1.textContent = String(myExchangeOfferedValue);
+                        ex1.classList.add('selected');
+                        console.log('Player 1 set exchangeCard1 to:', ex1.textContent);
+                    }
+                }
+                // Re-render buttons to update UI
+                renderButtons();
             }
 
             // Top-row (cardButton1..7) selection toggler
@@ -938,6 +1089,73 @@
                     }
                 }
             });
+
+            // Exchange socket events
+            socket.on('exchangeOffer', (data) => {
+                if (data.from === playerId) return;
+                // Player 2 offered a value; show it on exchangeCard2 (partner's card) and enter exchange mode
+                incomingExchangeValue = data.value;
+                isExchangeActive = true;
+                setActionButtonsDisabled(true);
+                const ex1 = document.getElementById('exchangeCard1');
+                const ex2 = document.getElementById('exchangeCard2');
+                // exchangeCard1 should be highlighted (my card for exchange)
+                if (ex1) ex1.classList.add('selected');
+                // exchangeCard2 should show partner's offered value
+                if (ex2) {
+                    ex2.textContent = String(incomingExchangeValue);
+                    ex2.classList.add('selected');
+                }
+                gameMessage.textContent = `Player 2 offered fuel ${incomingExchangeValue}. Select your fuel to exchange.`;
+                // Re-render buttons to update UI and show the value on exchangeCard2
+                renderButtons();
+            });
+
+            socket.on('exchangeAccept', (data) => {
+                if (data.from === playerId) return;
+                console.log('Player 1 received exchangeAccept:', data);
+                // Player 2 selected their fuel card; now both players should swap
+                const responderValue = data.responderValue;
+                console.log('Player 1 responderValue:', responderValue, 'myExchangeSelectedFuelIndex:', myExchangeSelectedFuelIndex);
+                console.log('Player 1 incomingExchangeValue:', incomingExchangeValue);
+                
+                if (myExchangeSelectedFuelIndex != null) {
+                    console.log('Player 1 before swap - fuel:', playerData.fuel);
+                    // If we initiated the exchange (incomingExchangeValue is null), use responderValue
+                    // If we responded to exchange (incomingExchangeValue is not null), use incomingExchangeValue
+                    const valueToUse = incomingExchangeValue != null ? incomingExchangeValue : responderValue;
+                    console.log('Player 1 valueToUse:', valueToUse);
+                    playerData.fuel[myExchangeSelectedFuelIndex] = valueToUse;
+                    console.log('Player 1 after swap - fuel:', playerData.fuel);
+                } else {
+                    console.log('Player 1 ERROR: myExchangeSelectedFuelIndex is null, cannot swap!');
+                }
+                // Reset visuals
+                finalizeExchangeUI();
+                updatePlayerDisplay();
+                renderButtons();
+                savePlayerDataToFile();
+            });
+
+            socket.on('exchangeReset', () => {
+                finalizeExchangeUI();
+                renderButtons();
+            });
+
+            function finalizeExchangeUI() {
+                console.log('Player 1 finalizeExchangeUI called');
+                isExchangeActive = false;
+                myExchangeSelectedFuelIndex = null;
+                myExchangeOfferedValue = null;
+                incomingExchangeValue = null;
+                const ex1 = document.getElementById('exchangeCard1');
+                const ex2 = document.getElementById('exchangeCard2');
+                if (ex1) ex1.classList.remove('selected');
+                if (ex2) ex2.classList.remove('selected');
+                setActionButtonsDisabled(false);
+                gameMessage.textContent = 'Exchange completed';
+                console.log('Player 1 exchange finalized');
+            }
 
             // Initialize
             updatePlayerDisplay();

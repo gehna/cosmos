@@ -136,6 +136,7 @@ io.on('connection', (socket) => {
     const gameData = readGameData();
     if (gameData) {
         socket.emit('gameData', gameData);
+        console.log(`📊 [${new Date().toISOString()}] Sent game data to ${socket.id}`);
     }
     
     // Handle player data updates
@@ -194,6 +195,20 @@ io.on('connection', (socket) => {
         
         // Broadcast action to all clients
         io.emit('gameActionUpdate', { playerId, action, details });
+    });
+
+    // Exchange events
+    socket.on('exchangeOffer', (data) => {
+        console.log(`🔄 [${new Date().toISOString()}] Exchange offer from ${data.from}: ${data.value}`);
+        // broadcast to others
+        socket.broadcast.emit('exchangeOffer', data);
+        console.log(`📡 [${new Date().toISOString()}] Broadcasted exchange offer to other players`);
+    });
+    socket.on('exchangeAccept', (data) => {
+        socket.broadcast.emit('exchangeAccept', data);
+    });
+    socket.on('exchangeReset', (data) => {
+        socket.broadcast.emit('exchangeReset', data);
     });
     
     socket.on('disconnect', () => {
