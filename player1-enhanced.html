@@ -116,6 +116,13 @@
             background: rgba(255, 193, 7, 0.5);
             border-color: rgba(255, 193, 7, 0.8);
         }
+        .btn.card.selected {
+            background: rgba(255, 193, 7, 0.9);
+            border-color: #ffd700;
+            border-width: 3px;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            transform: scale(1.05);
+        }
 
         .btn.fuel {
             background: rgba(40, 167, 69, 0.3);
@@ -276,6 +283,8 @@
             
             // Track selected fuel cards
             let selectedFuelCards = new Set();
+            // Track selected top-row card buttons (labels 'cardButton1' .. 'cardButton7') in selection order
+            let selectedTopCards = [];
             
             // Player data
             let playerData = {
@@ -357,11 +366,57 @@
                 };
             }
 
+            // Compute card slots so top row (1-7) is always filled left-to-right,
+            // pulling from the second row (8-15) as needed
+            function computeCardSlots(cards) {
+                const compacted = (cards || []).filter(v => v !== null && v !== undefined && v !== '');
+                const slots = new Array(15).fill(null);
+                // Fill top row first (indices 0..6), then bottom row (indices 7..14)
+                for (let i = 0; i < Math.min(compacted.length, 15); i++) {
+                    slots[i] = compacted[i];
+                }
+                return slots;
+            }
+
+            function mapCardLabelToSlotIndex(label) {
+                const num = parseInt(label.replace('cardButton', ''));
+                if (Number.isNaN(num)) return null;
+                if (num >= 1 && num <= 7) {
+                    // Top row: 1 -> 9 (index 8), 7 -> 15 (index 14)
+                    return 8 + (num - 1);
+                }
+                if (num >= 8 && num <= 15) {
+                    // Bottom row: 8 -> index 0 (first), 15 -> index 7 (eighth)
+                    return num - 8;
+                }
+                return null;
+            }
+
+            function getCardValueForLabel(label, cardSlots) {
+                const idx = mapCardLabelToSlotIndex(label);
+                if (idx == null) return '';
+                return cardSlots[idx] != null ? cardSlots[idx] : '';
+            }
+
+            function getSelectedTopCardsSorted() {
+                return [...selectedTopCards].sort((a, b) => {
+                    const na = parseInt(a.replace('cardButton',''));
+                    const nb = parseInt(b.replace('cardButton',''));
+                    return na - nb;
+                });
+            }
+
+            function getMappedCardLabel(label) {
+                const idx = mapCardLabelToSlotIndex(label);
+                if (idx == null) return label;
+                return `cardButton${idx + 1}`;
+            }
+
             function createButton(hotspot, index) {
                 const btn = document.createElement('button');
                 btn.className = `btn ${getButtonType(hotspot.label)}`;
                 btn.id = hotspot.label;
-                btn.title = hotspot.label;
+                btn.title = hotspot.label.startsWith('cardButton') ? getMappedCardLabel(hotspot.label) : hotspot.label;
                 
                 // Get layout container dimensions
                 const layoutDims = getLayoutDimensions();
@@ -460,14 +515,33 @@
                 btn.style.height = h + 'px';
                 
                 // Add text content to buttons
+                const cardSlots = computeCardSlots(playerData.cards);
                 if (hotspot.label === 'burnButton') {
                     btn.textContent = 'BURN';
                 } else if (hotspot.label === 'flyButton') {
                     btn.textContent = 'FLY';
                 } else if (hotspot.label.startsWith('cardButton') && parseInt(hotspot.label.replace('cardButton', '')) <= 15) {
-                    const cardIndex = parseInt(hotspot.label.replace('cardButton', '')) - 1;
-                    if (cardIndex < playerData.cards.length) {
-                        btn.textContent = playerData.cards[cardIndex];
+                    const num = parseInt(hotspot.label.replace('cardButton', ''));
+                    // If top-row card (1..7) and selected, override with values from 8.. based on LEFT-TO-RIGHT order
+                    if (num >= 1 && num <= 7 && selectedTopCards.includes(hotspot.label)) {
+                        const sortedSelected = getSelectedTopCardsSorted();
+                        const selectionIndex = sortedSelected.indexOf(hotspot.label); // 0-based by left->right
+                        const secondRow = (playerData.cards || []).slice(7, 15);
+                        const overrideValue = secondRow[selectionIndex];
+                        if (overrideValue != null) {
+                            btn.textContent = overrideValue;
+                        } else {
+                            const fallback = getCardValueForLabel(hotspot.label, cardSlots);
+                            if (fallback !== '') btn.textContent = fallback;
+                        }
+                        btn.classList.add('selected');
+                    } else {
+                        const value = getCardValueForLabel(hotspot.label, cardSlots);
+                        if (value !== '') btn.textContent = value;
+                        // preserve selected style if previously toggled (safety)
+                        if (num >= 1 && num <= 7 && selectedTopCards.includes(hotspot.label)) {
+                            btn.classList.add('selected');
+                        }
                     }
                 } else if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
                     const fuelIndex = parseInt(hotspot.label.replace('fuelButton', '')) - 1;
@@ -493,6 +567,8 @@
                     // Handle fuel card selection
                     if (hotspot.label.startsWith('fuelButton') && !hotspot.label.includes('Exchange')) {
                         handleFuelCardSelection(hotspot.label, btn);
+                    } else if (hotspot.label.startsWith('cardButton')) {
+                        handleTopCardSelection(hotspot.label, btn);
                     } else {
                         handleButtonClick(hotspot, index);
                     }
@@ -538,6 +614,34 @@
                 `;
             }
 
+            // Top-row (cardButton1..7) selection toggler
+            function handleTopCardSelection(cardLabel, button) {
+                const num = parseInt(cardLabel.replace('cardButton', ''));
+                if (Number.isNaN(num) || num < 1 || num > 7) {
+                    return; // only top row is selectable for this behavior
+                }
+                const idx = selectedTopCards.indexOf(cardLabel);
+                if (idx >= 0) {
+                    // Deselect
+                    selectedTopCards.splice(idx, 1);
+                    button.classList.remove('selected');
+                } else {
+                    // Select and append to the end (selection order)
+                    selectedTopCards.push(cardLabel);
+                    button.classList.add('selected');
+                }
+                // Reflect values immediately
+                renderButtons();
+                // Show info
+                const secondRow = (playerData.cards || []).slice(7, 15);
+                const mapped = selectedTopCards.map((lbl, i) => secondRow[i]).filter(v => v != null);
+                buttonInfo.innerHTML = `
+                    <div><strong>Top Cards Selection</strong></div>
+                    <div>Selected slots: ${selectedTopCards.map(l => l.replace('cardButton','')).join(', ') || 'none'}</div>
+                    <div>Mapped values from 8..: ${mapped.join(', ') || 'none'}</div>
+                `;
+            }
+
             function handleButtonClick(hotspot, index) {
                 console.log(`Player 1 clicked: ${hotspot.label} (${index + 1})`);
                 
@@ -563,7 +667,7 @@
                 // Update button info display
                 buttonInfo.innerHTML = `
                     <div><strong>Button ${index + 1}</strong></div>
-                    <div>Label: ${hotspot.label}</div>
+                    <div>Label: ${hotspot.label.startsWith('cardButton') ? getMappedCardLabel(hotspot.label) : hotspot.label}</div>
                     <div>Player: ${playerData.name}</div>
                     <div>Action: ${getButtonAction(hotspot.label)}</div>
                 `;
@@ -603,6 +707,17 @@
 
                 // Clear selected fuel cards
                 selectedFuelCards.clear();
+
+                // Refill emptied fuel slots from the cards row starting from the first card (1..N)
+                {
+                    const need = Math.max(0, 5 - playerData.fuel.length);
+                    if (need > 0 && playerData.cards.length > 0) {
+                        const takeCount = Math.min(need, playerData.cards.length);
+                        const taken = playerData.cards.slice(0, takeCount);
+                        playerData.fuel.push(...taken);
+                        playerData.cards.splice(0, takeCount);
+                    }
+                }
 
                 // Update game message
                 gameMessage.textContent = `Player 1 flew using fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`;
@@ -666,7 +781,7 @@
 
             function regeneratePlayerData() {
                 const newCards = generateRandomCards();
-                const newFuel = newCards.slice(0, 5); // First 5 cards as fuel
+                const newFuel = generateRandomFuel();
                 
                 playerData.cards = newCards;
                 playerData.fuel = newFuel;
