@@ -230,35 +230,76 @@
             transform: scale(1.05);
         }
 
-        .game-message {
+
+
+        .flight-map {
             position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            height: 60px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid var(--player-color);
-            border-radius: 8px;
-            color: var(--text);
-            font-size: 16px;
-            font-weight: 600;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
-            z-index: 100;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            pointer-events: none;
         }
+
+        .flight-map svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .flight-map circle {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="layout-container">
-            <div class="game-message" id="game-message">
-                Player 1 - Ready to Play!
+            
+            
+            <!-- Flight Map -->
+            <div class="flight-map" id="flight-map">
+                <svg width="100%" height="100%" viewBox="0 0 375 812" preserveAspectRatio="xMidYMid meet">
+                    <!-- Flight paths between planets -->
+                    <line x1="57" y1="237" x2="57" y2="58" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="57" y1="237" x2="153" y2="115" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="57" y1="58" x2="153" y2="115" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="57" y1="58" x2="312" y2="62" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="312" y1="62" x2="261" y2="176" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="312" y1="62" x2="321" y2="240" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="261" y1="176" x2="321" y2="240" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="153" y1="115" x2="173" y2="233" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="261" y1="176" x2="173" y2="233" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="153" y1="115" x2="312" y2="62" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    <line x1="153" y1="115" x2="261" y2="176" stroke="#4a5568" stroke-width="2" opacity="0.6"/>
+                    
+                    <!-- Planets positioned exactly at captured coordinates (scaled to viewBox 0 0 375 812) -->
+                    <circle cx="57" cy="237" r="20" fill="#667eea" stroke="#4a5568" stroke-width="2"/>
+                    <text x="57" y="237" text-anchor="middle" fill="white" font-size="20" font-weight="bold" data-planet-id="1" dominant-baseline="middle">1</text>
+                    
+                    <circle cx="57" cy="58" r="20" fill="#764ba2" stroke="#4a5568" stroke-width="2"/>
+                    <text x="57" y="58" text-anchor="middle" fill="white" font-size="20" font-weight="bold" data-planet-id="2" dominant-baseline="middle">2</text>
+                    
+                    <circle cx="153" cy="115" r="20" fill="#f093fb" stroke="#4a5568" stroke-width="2"/>
+                    <text x="153" y="115" text-anchor="middle" fill="white" font-size="20" font-weight="bold" data-planet-id="3" dominant-baseline="middle">3</text>
+                    
+                    <circle cx="173" cy="233" r="20" fill="#4facfe" stroke="#4a5568" stroke-width="2"/>
+                    <text x="173" y="233" text-anchor="middle" fill="white" font-size="20" font-weight="bold" data-planet-id="4" dominant-baseline="middle">4</text>
+                    
+                    <circle cx="312" cy="62" r="20" fill="#43e97b" stroke="#4a5568" stroke-width="2"/>
+                    <text x="312" y="62" text-anchor="middle" fill="white" font-size="20" font-weight="bold" data-planet-id="5" dominant-baseline="middle">5</text>
+                    
+                    <circle cx="261" cy="176" r="20" fill="#fa709a" stroke="#4a5568" stroke-width="2"/>
+                    <text x="261" y="176" text-anchor="middle" fill="white" font-size="20" font-weight="bold" data-planet-id="6" dominant-baseline="middle">6</text>
+                    
+                    <circle cx="321" cy="240" r="20" fill="#ffecd2" stroke="#4a5568" stroke-width="2"/>
+                    <text x="321" y="240" text-anchor="middle" fill="#4a5568" font-size="20" font-weight="bold" data-planet-id="7" dominant-baseline="middle">7</text>
+                </svg>
             </div>
+            
             <div class="button-layer" id="button-layer">
                 <!-- Buttons will be dynamically positioned here -->
             </div>
@@ -293,7 +334,6 @@
             const fuelCount = document.getElementById('fuel-count');
             const cardsList = document.getElementById('cards-list');
             const regenerateBtn = document.getElementById('regenerate-btn');
-            const gameMessage = document.getElementById('game-message');
             
             // Initialize WebSocket connection
             const socket = io();
@@ -682,13 +722,11 @@
                     // Deselect
                     selectedFuelCards.delete(fuelLabel);
                     button.classList.remove('selected');
-                    gameMessage.textContent = `Player 1 deselected fuel ${fuelValue}`;
                     console.log(`Player 1 deselected fuel: ${fuelValue}`);
                 } else {
                     // Select
                     selectedFuelCards.add(fuelLabel);
                     button.classList.add('selected');
-                    gameMessage.textContent = `Player 1 selected fuel ${fuelValue}`;
                     console.log(`Player 1 selected fuel: ${fuelValue}`);
                 }
                 
@@ -720,11 +758,9 @@
                 if (isExchangeActive) {
                     exchangeBtn.classList.add('selected');
                     setActionButtonsDisabled(true);
-                    gameMessage.textContent = 'Player 1 started exchange: select a fuel card to offer';
                 } else {
                     exchangeBtn.classList.remove('selected');
                     setActionButtonsDisabled(false);
-                    gameMessage.textContent = 'Player 1 cancelled exchange';
                     socket.emit('exchangeReset', { from: playerId });
                 }
             }
@@ -755,7 +791,6 @@
                 // Check if we have an incoming exchange value (we're responding to an offer)
                 if (incomingExchangeValue != null) {
                     // We're responding to an offer, send exchangeAccept
-                    gameMessage.textContent = `Player 1 accepted exchange: ${myExchangeOfferedValue} for ${incomingExchangeValue}`;
                     console.log('Player 1 SENDING exchangeAccept:', { from: playerId, responderValue: myExchangeOfferedValue });
                     socket.emit('exchangeAccept', { from: playerId, responderValue: myExchangeOfferedValue });
                     console.log('Player 1 exchangeAccept SENT');
@@ -774,7 +809,6 @@
                     savePlayerDataToFile();
                 } else {
                     // We're initiating an exchange, send exchangeOffer
-                    gameMessage.textContent = `Player 1 offered fuel ${myExchangeOfferedValue}. Waiting Player 2...`;
                     console.log('Player 1 SENDING exchangeOffer:', { from: playerId, value: myExchangeOfferedValue });
                     socket.emit('exchangeOffer', { from: playerId, value: myExchangeOfferedValue });
                     console.log('Player 1 exchangeOffer SENT');
@@ -841,7 +875,6 @@
                 });
                 
                 // Update game message
-                gameMessage.textContent = `Player 1 used ${hotspot.label} - ${getButtonAction(hotspot.label)}`;
                 
                 // Update button info display
                 buttonInfo.innerHTML = `
@@ -857,7 +890,6 @@
 
             function handleFlyAction() {
                 if (selectedFuelCards.size === 0) {
-                    gameMessage.textContent = "Player 1 - No fuel selected! Select fuel cards to fly.";
                     buttonInfo.innerHTML = `
                         <div><strong>FLY Action</strong></div>
                         <div>Status: No fuel selected</div>
@@ -899,7 +931,6 @@
                 }
 
                 // Update game message
-                gameMessage.textContent = `Player 1 flew using fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`;
 
                 // Update button info
                 buttonInfo.innerHTML = `
@@ -922,7 +953,6 @@
 
             function handleBurnAction() {
                 if (selectedFuelCards.size === 0) {
-                    gameMessage.textContent = "Player 1 - No fuel selected! Select fuel cards to burn.";
                     buttonInfo.innerHTML = `
                         <div><strong>BURN Action</strong></div>
                         <div>Status: No fuel selected</div>
@@ -960,7 +990,6 @@
                     }
                 }
 
-                gameMessage.textContent = `Player 1 burned fuel: ${usedFuelValues.join(', ')} (Total: ${totalFuelUsed})`;
 
                 buttonInfo.innerHTML = `
                     <div><strong>BURN Action</strong></div>
@@ -1083,7 +1112,6 @@
             socket.on('gameActionUpdate', (data) => {
                 if (data.playerId !== playerId) {
                     console.log(`Other player action: ${data.action}`);
-                    gameMessage.textContent = `Player 2: ${data.action}`;
                     if (data.details) {
                         console.log('Action details:', data.details);
                     }
@@ -1106,7 +1134,6 @@
                     ex2.textContent = String(incomingExchangeValue);
                     ex2.classList.add('selected');
                 }
-                gameMessage.textContent = `Player 2 offered fuel ${incomingExchangeValue}. Select your fuel to exchange.`;
                 // Re-render buttons to update UI and show the value on exchangeCard2
                 renderButtons();
             });
@@ -1153,9 +1180,10 @@
                 if (ex1) ex1.classList.remove('selected');
                 if (ex2) ex2.classList.remove('selected');
                 setActionButtonsDisabled(false);
-                gameMessage.textContent = 'Exchange completed';
                 console.log('Player 1 exchange finalized');
             }
+
+
 
             // Initialize
             updatePlayerDisplay();
